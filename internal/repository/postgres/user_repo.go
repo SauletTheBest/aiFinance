@@ -13,7 +13,7 @@ import (
 type UserRepo struct {
 	db *gorm.DB
 }
-type UserModel struct {
+type User struct {
 	ID           uuid.UUID `gorm:"type:uuid;primaryKey"`
 	Email        string    `gorm:"uniqueIndex"`
 	PasswordHash string
@@ -21,7 +21,7 @@ type UserModel struct {
 	UpdatedAt    time.Time
 }
 
-func toDomain(model *UserModel) *domain.User {
+func toDomain(model *User) *domain.User {
 	return &domain.User{
 		ID:           model.ID,
 		Email:        model.Email,
@@ -31,8 +31,8 @@ func toDomain(model *UserModel) *domain.User {
 	}
 }
 
-func toModel(user *domain.User) *UserModel {
-	return &UserModel{
+func toModel(user *domain.User) *User {
+	return &User{
 		ID:           user.ID,
 		Email:        user.Email,
 		PasswordHash: user.PasswordHash,
@@ -51,7 +51,7 @@ func (r *UserRepo) Create(ctx context.Context, user *domain.User) error {
 }
 
 func (r *UserRepo) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
-	var model UserModel
+	var model User
 
 	err := r.db.WithContext(ctx).Where("email = ?", email).First(&model).Error 
 
@@ -64,7 +64,7 @@ func (r *UserRepo) GetByEmail(ctx context.Context, email string) (*domain.User, 
 
 func (r *UserRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
 	
-	var model UserModel 
+	var model User 
 	err := r.db.WithContext(ctx).Where("id = ?", id).First(&model).Error
 
 	if err != nil {

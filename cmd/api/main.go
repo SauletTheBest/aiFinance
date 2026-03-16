@@ -22,7 +22,7 @@ func main() {
 
 	//поидее тут херня но потом надо это перенести ото че то не чисто да
 	// Load .env file
-	if err := godotenv.Load(); err != nil {
+	if err := godotenv.Load("../../.env"); err != nil {
 		log.Println("No .env file found")
 	}
 
@@ -66,7 +66,7 @@ func main() {
 		port = "8080"
 	}
 
-	log.Printf("Server starting on port %s", port)
+	log.Printf("Server starting on port https://localhost:%s", port)
 	if err := router.Run(":" + port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
