@@ -10,7 +10,6 @@ import (
 
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/config"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/db"
-	"github.com/SauletTheBest/BackendFinancialApplication/internal/domain"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/handler"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/repository/postgres"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/server"
@@ -73,5 +72,5 @@ func main() {
 }
 
 func autoMigrate(db *gorm.DB) error {
-	return db.AutoMigrate(&domain.User{})
+	return db.AutoMigrate(&postgres.User{}) //теперь должно быть уникальным
 }

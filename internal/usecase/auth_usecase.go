@@ -2,7 +2,7 @@ package usecase
 
 import (
 	"context"
-
+	"errors" //
 	"github.com/google/uuid"
 	"time"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/repository"
@@ -23,9 +23,15 @@ func NewAuthUsecase(userRepo repository.UserRepository, jwtSvc *jwt.Service) *Au
 	}
 }
 
-func (u *AuthUsecase) Register(ctx context.Context, email string, passwordRaw string) (string, error) {
+func (u *AuthUsecase) Register(ctx context.Context, name string, email string, passwordRaw string) (string, error) {
 	//logic
 
+	existingUser, err := u.userRepo.GetByEmail(ctx, email) //
+
+	if err == nil && existingUser != nil { //
+        return "", errors.New("user with this email already exists")
+    }
+	
 	hash , err := password.Hash(passwordRaw)
 
 	if err != nil {
@@ -33,6 +39,7 @@ func (u *AuthUsecase) Register(ctx context.Context, email string, passwordRaw st
 	}
 	user := &domain.User {
 		ID:  uuid.New(),
+		Name: name,
 		Email: email,
 		PasswordHash: hash,
 		CreatedAt: time.Now(),

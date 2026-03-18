@@ -15,6 +15,7 @@ type UserRepo struct {
 }
 type User struct {
 	ID           uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Name 		 string
 	Email        string    `gorm:"uniqueIndex"`
 	PasswordHash string
 	CreatedAt    time.Time
@@ -24,6 +25,7 @@ type User struct {
 func toDomain(model *User) *domain.User {
 	return &domain.User{
 		ID:           model.ID,
+		Name: 		  model.Name,
 		Email:        model.Email,
 		PasswordHash: model.PasswordHash,
 		CreatedAt:    model.CreatedAt,
@@ -34,6 +36,7 @@ func toDomain(model *User) *domain.User {
 func toModel(user *domain.User) *User {
 	return &User{
 		ID:           user.ID,
+		Name: 		  user.Name,
 		Email:        user.Email,
 		PasswordHash: user.PasswordHash,
 		CreatedAt:    user.CreatedAt,
