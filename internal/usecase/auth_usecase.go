@@ -23,7 +23,7 @@ func NewAuthUsecase(userRepo repository.UserRepository, jwtSvc *jwt.Service) *Au
 	}
 }
 
-func (u *AuthUsecase) Register(ctx context.Context, name string, email string, passwordRaw string) (string, error) {
+func (u *AuthUsecase) Register(ctx context.Context, name string, email string, passwordRaw string, currency string) (string, error) {
 	//logic
 
 	existingUser, err := u.userRepo.GetByEmail(ctx, email) //
@@ -42,6 +42,7 @@ func (u *AuthUsecase) Register(ctx context.Context, name string, email string, p
 		Name: name,
 		Email: email,
 		PasswordHash: hash,
+		Currency: currency,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}

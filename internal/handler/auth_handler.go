@@ -26,7 +26,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	// Format validation  валидация на слое handler
-    if validationErrors := validator.ValidateRegistration(req.Name, req.Email, req.Password); len(validationErrors) > 0 {
+    if validationErrors := validator.ValidateRegistration(req.Name, req.Email, req.Password, req.Currency); len(validationErrors) > 0 {
         c.JSON(http.StatusBadRequest, gin.H{
             "error":   "validation failed",
             "details": validationErrors,
@@ -34,7 +34,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 	//если пользователь сразу регается то вход идет сразу без повторного логина через login
-	token, err := h.AuthUsecase.Register(c.Request.Context(), req.Name, req.Email, req.Password)
+	token, err := h.AuthUsecase.Register(c.Request.Context(), req.Name, req.Email, req.Password, req.Currency)
 	if err != nil {
 
 		// cнова валидация как в usecase

@@ -18,6 +18,7 @@ type User struct {
 	Name 		 string
 	Email        string    `gorm:"uniqueIndex"`
 	PasswordHash string
+	Currency     string
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }
@@ -28,6 +29,7 @@ func toDomain(model *User) *domain.User {
 		Name: 		  model.Name,
 		Email:        model.Email,
 		PasswordHash: model.PasswordHash,
+		Currency:     model.Currency,
 		CreatedAt:    model.CreatedAt,
 		UpdatedAt:    model.UpdatedAt,
 	}
@@ -39,6 +41,7 @@ func toModel(user *domain.User) *User {
 		Name: 		  user.Name,
 		Email:        user.Email,
 		PasswordHash: user.PasswordHash,
+		Currency:     user.Currency,
 		CreatedAt:    user.CreatedAt,
 		UpdatedAt:    user.UpdatedAt,
 	}

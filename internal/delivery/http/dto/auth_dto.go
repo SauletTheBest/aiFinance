@@ -5,6 +5,7 @@ type RegisterRequest struct { //basically two rows but i can extend in the futur
 	Name string `json:"name"`
 	Email string `json:"email"`
 	Password string `json:"password"`
+	Currency string `json:"currency"`
 }
 
 type LoginRequest struct {

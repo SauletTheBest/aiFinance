@@ -1,47 +1,56 @@
 package validator
 
-
 import (
-    "net/mail"
-    //"regexp" // можно потом добавить полноценную валидацию
+	"net/mail"
+	"regexp" // можно потом добавить полноценную валидацию
 )
 
 type ValidationError struct {
-    Field   string
-    Message string
+	Field   string
+	Message string
 }
 
 func (e *ValidationError) Error() string {
-    return e.Message
+	return e.Message
 }
 
-func ValidateRegistration(name, email, password string) []*ValidationError {
-    var errors []*ValidationError
-    
-    // Name validation
-    if name == "" {
-        errors = append(errors, &ValidationError{Field: "name", Message: "name is required"})
-    } else if len(name) < 2 {
-        errors = append(errors, &ValidationError{Field: "name", Message: "name must be at least 2 characters"})
-    } else if len(name) > 100 {
-        errors = append(errors, &ValidationError{Field: "name", Message: "name must be less than 100 characters"})
-    }
-    
-    // Email validation
-    if email == "" {
-        errors = append(errors, &ValidationError{Field: "email", Message: "email is required"})
-    } else if _, err := mail.ParseAddress(email); err != nil {
-        errors = append(errors, &ValidationError{Field: "email", Message: "invalid email format"})
-    }
-    
-    // Password validation
-    if password == "" {
-        errors = append(errors, &ValidationError{Field: "password", Message: "password is required"})
-    } else if len(password) < 8 {
-        errors = append(errors, &ValidationError{Field: "password", Message: "password must be at least 8 characters"})
-    } else if len(password) > 128 {
-        errors = append(errors, &ValidationError{Field: "password", Message: "password must be less than 128 characters"})
-    }
-    
-    return errors
+func ValidateRegistration(name, email, password, currency string) []*ValidationError {
+	var errors []*ValidationError
+
+	// Name validation
+	if name == "" {
+		errors = append(errors, &ValidationError{Field: "name", Message: "name is required"})
+	} else if len(name) < 2 {
+		errors = append(errors, &ValidationError{Field: "name", Message: "name must be at least 2 characters"})
+	} else if len(name) > 100 {
+		errors = append(errors, &ValidationError{Field: "name", Message: "name must be less than 100 characters"})
+	}
+
+	// Email validation
+	if email == "" {
+		errors = append(errors, &ValidationError{Field: "email", Message: "email is required"})
+	} else if _, err := mail.ParseAddress(email); err != nil {
+		errors = append(errors, &ValidationError{Field: "email", Message: "invalid email format"})
+	}
+
+	// Password validation
+	if password == "" {
+		errors = append(errors, &ValidationError{Field: "password", Message: "password is required"})
+	} else if len(password) < 8 {
+		errors = append(errors, &ValidationError{Field: "password", Message: "password must be at least 8 characters"})
+	} else if len(password) > 128 {
+		errors = append(errors, &ValidationError{Field: "password", Message: "password must be less than 128 characters"})
+	}
+	//Currency Validation
+	if currency == "" {
+		errors = append(errors, &ValidationError{Field: "currency", Message: "currency is required"})
+	} else if len(currency) > 3 {
+		errors = append(errors, &ValidationError{Field: "currency", Message: "currency name is too long"})
+	} else if len(currency) < 3 {
+		errors = append(errors, &ValidationError{Field: "currency", Message: "currency name is too short"})
+	} else if !regexp.MustCompile(`^[A-Z]+$`).MatchString(currency) {
+		errors = append(errors, &ValidationError{Field: "currency", Message: "currency should be in uppercase"})
+	}
+
+	return errors
 }

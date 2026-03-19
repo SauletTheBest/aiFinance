@@ -12,6 +12,7 @@ type User struct {
 	Name string
 	Email string
 	PasswordHash string
+	Currency string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
