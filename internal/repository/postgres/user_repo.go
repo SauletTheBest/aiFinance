@@ -79,3 +79,25 @@ func (r *UserRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, err
 
 	return toDomain(&model), nil
 }
+func (r *UserRepo) Update(ctx context.Context, user *domain.User) error {
+	model := toModel(user)
+	return r.db.WithContext(ctx).Save(model).Error
+}
+
+func (r *UserRepo) UpdateProfile(ctx context.Context, userID uuid.UUID, name, currency string) error {
+	user, err := r.GetByID(ctx, userID)
+	if err != nil || user == nil {
+		return err
+	}
+	
+	// Update fields if provided
+	if name != "" {
+		user.Name = name
+	}
+	if currency != "" {
+		user.Currency = currency
+	}
+	user.UpdatedAt = time.Now()
+	
+	return r.Update(ctx, user)
+}

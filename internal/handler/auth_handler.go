@@ -7,8 +7,6 @@ import (
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/delivery/http/dto"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/usecase"
 	"github.com/SauletTheBest/BackendFinancialApplication/pkg/validator"
-
-
 )
 
 type AuthHandler struct {

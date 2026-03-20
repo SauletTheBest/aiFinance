@@ -7,7 +7,7 @@ import (
 	"github.com/SauletTheBest/BackendFinancialApplication/pkg/jwt"
 )
 
-func SetupRouter(authHandler *handler.AuthHandler, jwtSvc *jwt.Service) *gin.Engine {
+func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHandler, jwtSvc *jwt.Service) *gin.Engine {
 	router := gin.Default()
 
 	// Health check
@@ -30,6 +30,9 @@ func SetupRouter(authHandler *handler.AuthHandler, jwtSvc *jwt.Service) *gin.Eng
 	{
 		// Add protected routes here
 		// Example: protected.GET("/profile", profileHandler.GetProfile)
+
+		protected.GET("/profile", userHandler.GetProfile)
+		protected.POST("/profile", userHandler.UpdateProfile)
 	}
 
 	return router
