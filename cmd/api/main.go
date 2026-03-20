@@ -51,13 +51,18 @@ func main() {
 	// Initialize usecases
 	authUsecase := usecase.NewAuthUsecase(userRepo, jwtSvc)
 
+	userUsecase := usecase.NewUserUseCase(userRepo)
+
 	// Initialize handlers
 	authHandler := &handler.AuthHandler{
 		AuthUsecase: authUsecase,
 	}
+	userHandler := &handler.UserHandler{
+		UserUsecase: userUsecase,
+	}
 
 	// Setup router
-	router := server.SetupRouter(authHandler, jwtSvc)
+	router := server.SetupRouter(authHandler, userHandler, jwtSvc)
 
 	// Start server
 	port := os.Getenv("SERVER_PORT")
