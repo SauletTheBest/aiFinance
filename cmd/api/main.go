@@ -48,11 +48,15 @@ func main() {
 	// Initialize repositories
 	userRepo := postgres.NewUserRepo(database)
 
+	transactionRepo := postgres.NewTransactionRepo(database)
+
 	// Initialize usecases
 	authUsecase := usecase.NewAuthUsecase(userRepo, jwtSvc)
-
+	
 	userUsecase := usecase.NewUserUseCase(userRepo)
-
+	
+	transactionUsecase := usecase.NewTransactionUsecase(transactionRepo, userRepo)
+	
 	// Initialize handlers
 	authHandler := &handler.AuthHandler{
 		AuthUsecase: authUsecase,
@@ -60,9 +64,12 @@ func main() {
 	userHandler := &handler.UserHandler{
 		UserUsecase: userUsecase,
 	}
+	transactionHandler := &handler.TransactionHandler{
+		TransactionUsecase: transactionUsecase,
+	}
 
 	// Setup router
-	router := server.SetupRouter(authHandler, userHandler, jwtSvc)
+	router := server.SetupRouter(authHandler, userHandler, transactionHandler, jwtSvc)
 
 	// Start server
 	port := os.Getenv("SERVER_PORT")
@@ -77,5 +84,5 @@ func main() {
 }
 
 func autoMigrate(db *gorm.DB) error {
-	return db.AutoMigrate(&postgres.User{}) //теперь должно быть уникальным
+	return db.AutoMigrate(&postgres.User{}, &postgres.Transaction{}) //теперь должно быть уникальным
 }

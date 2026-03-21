@@ -54,3 +54,44 @@ func ValidateRegistration(name, email, password, currency string) []*ValidationE
 
 	return errors
 }
+
+func ValidateTransaction(amount float64, description string) []*ValidationError {
+	var errors []*ValidationError
+
+	// Amount validation
+	if amount <= 0 {
+		errors = append(errors, &ValidationError{Field: "amount", Message: "amount must be greater than 0"})
+	} else if amount > 999999999 {
+		errors = append(errors, &ValidationError{Field: "amount", Message: "amount is too large"})
+	}
+
+	// Description validation
+	if description == "" {
+		errors = append(errors, &ValidationError{Field: "description", Message: "description is required"})
+	} else if len(description) > 500 {
+		errors = append(errors, &ValidationError{Field: "description", Message: "description must be less than 500 characters"})
+	}
+
+	return errors
+}
+
+func ValidateUpdateTransaction(amount *float64, description *string) []*ValidationError {
+	var errors []*ValidationError
+
+	// Amount validation (if provided)
+	if amount != nil && *amount <= 0 {
+		errors = append(errors, &ValidationError{Field: "amount", Message: "amount must be greater than 0"})
+	} else if amount != nil && *amount > 999999999 {
+		errors = append(errors, &ValidationError{Field: "amount", Message: "amount is too large"})
+	}
+
+	// Description validation (if provided)
+	if description != nil && *description == "" {
+		errors = append(errors, &ValidationError{Field: "description", Message: "description cannot be empty"})
+	} else if description != nil && len(*description) > 500 {
+		errors = append(errors, &ValidationError{Field: "description", Message: "description must be less than 500 characters"})
+	}
+
+	return errors
+}
+

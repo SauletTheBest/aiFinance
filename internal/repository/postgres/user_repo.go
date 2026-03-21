@@ -18,12 +18,12 @@ type User struct {
 	Name 		 string
 	Email        string    `gorm:"uniqueIndex"`
 	PasswordHash string
-	Currency     string
+	Currency     string    `gorm:"type:varchar(3);not null;default:'KZT'"`
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }
 
-func toDomain(model *User) *domain.User {
+func usertoDomain(model *User) *domain.User {
 	return &domain.User{
 		ID:           model.ID,
 		Name: 		  model.Name,
@@ -65,7 +65,7 @@ func (r *UserRepo) GetByEmail(ctx context.Context, email string) (*domain.User, 
 		return  nil, err
 	}
 
-	return toDomain(&model), nil
+	return usertoDomain(&model), nil
 }
 
 func (r *UserRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
@@ -77,7 +77,7 @@ func (r *UserRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, err
 		return nil, err
 	}
 
-	return toDomain(&model), nil
+	return usertoDomain(&model), nil
 }
 func (r *UserRepo) Update(ctx context.Context, user *domain.User) error {
 	model := toModel(user)
