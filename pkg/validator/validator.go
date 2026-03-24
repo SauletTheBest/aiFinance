@@ -55,14 +55,16 @@ func ValidateRegistration(name, email, password, currency string) []*ValidationE
 	return errors
 }
 
-func ValidateTransaction(amount float64, description string) []*ValidationError {
+func ValidateTransaction(amount float64, description string, category string) []*ValidationError {
 	var errors []*ValidationError
 
 	// Amount validation
-	if amount <= 0 {
-		errors = append(errors, &ValidationError{Field: "amount", Message: "amount must be greater than 0"})
+	if amount == 0 {
+		errors = append(errors, &ValidationError{Field: "amount", Message: "amount cannot be zero"})
+	} else if amount < -999999999 {
+		errors = append(errors, &ValidationError{Field: "amount", Message: "expense amount is too large"})
 	} else if amount > 999999999 {
-		errors = append(errors, &ValidationError{Field: "amount", Message: "amount is too large"})
+		errors = append(errors, &ValidationError{Field: "amount", Message: "income amount is too large"})
 	}
 
 	// Description validation
@@ -72,17 +74,28 @@ func ValidateTransaction(amount float64, description string) []*ValidationError 
 		errors = append(errors, &ValidationError{Field: "description", Message: "description must be less than 500 characters"})
 	}
 
+	// category
+	if category == "" {
+		errors = append(errors, &ValidationError{Field: "category", Message: "category is required"})
+	} else if len(category) > 30 {
+		errors = append(errors, &ValidationError{Field: "category", Message: "category must be less than 30 characters"})
+	}
+
 	return errors
 }
 
-func ValidateUpdateTransaction(amount *float64, description *string) []*ValidationError {
+func ValidateUpdateTransaction(amount *float64, description *string, category *string) []*ValidationError {
 	var errors []*ValidationError
 
 	// Amount validation (if provided)
-	if amount != nil && *amount <= 0 {
-		errors = append(errors, &ValidationError{Field: "amount", Message: "amount must be greater than 0"})
-	} else if amount != nil && *amount > 999999999 {
-		errors = append(errors, &ValidationError{Field: "amount", Message: "amount is too large"})
+	if amount != nil {
+		if *amount == 0 {
+			errors = append(errors, &ValidationError{Field: "amount", Message: "amount cannot be zero"})
+		} else if *amount < -999999999 {
+			errors = append(errors, &ValidationError{Field: "amount", Message: "expense amount is too large"})
+		} else if *amount > 999999999 {
+			errors = append(errors, &ValidationError{Field: "amount", Message: "income amount is too large"})
+		}
 	}
 
 	// Description validation (if provided)
@@ -92,6 +105,12 @@ func ValidateUpdateTransaction(amount *float64, description *string) []*Validati
 		errors = append(errors, &ValidationError{Field: "description", Message: "description must be less than 500 characters"})
 	}
 
+	//category
+	if category != nil && *category == "" {
+		errors = append(errors, &ValidationError{Field: "category", Message: "category cannot be empty"})
+	} else if category != nil && len(*category) > 30 {
+		errors = append(errors, &ValidationError{Field: "category", Message: "category must be less than 30 characters"})
+	}
+
 	return errors
 }
-

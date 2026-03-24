@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-	"gorm.io/gorm"
 
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/config"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/db"
@@ -38,8 +37,8 @@ func main() {
 	}
 
 	// Auto-migrate database
-	if err := autoMigrate(database); err != nil {
-		log.Fatalf("Failed to migrate database: %v", err)
+	if err := db.RunMigrations(database); err != nil {
+		log.Fatalf("Failed to run migrations: %v", err)
 	}
 
 	// Initialize services
@@ -49,11 +48,15 @@ func main() {
 	userRepo := postgres.NewUserRepo(database)
 
 	transactionRepo := postgres.NewTransactionRepo(database)
+	
+	statisticsRepo := postgres.NewStatisticsRepo(database)
 
 	// Initialize usecases
 	authUsecase := usecase.NewAuthUsecase(userRepo, jwtSvc)
 	
 	userUsecase := usecase.NewUserUseCase(userRepo)
+	
+	statisticsUsecase := usecase.NewStatisticsUsecase(statisticsRepo, transactionRepo)
 	
 	transactionUsecase := usecase.NewTransactionUsecase(transactionRepo, userRepo)
 	
@@ -67,9 +70,15 @@ func main() {
 	transactionHandler := &handler.TransactionHandler{
 		TransactionUsecase: transactionUsecase,
 	}
+    
+    statisticsHandler := &handler.StatisticsHandler{
+		StatisticsUsecase: statisticsUsecase,
+	}
+
 
 	// Setup router
-	router := server.SetupRouter(authHandler, userHandler, transactionHandler, jwtSvc)
+	router := server.SetupRouter(authHandler, userHandler, transactionHandler, statisticsHandler, jwtSvc)
+
 
 	// Start server
 	port := os.Getenv("SERVER_PORT")
@@ -81,8 +90,4 @@ func main() {
 	if err := router.Run(":" + port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
-}
-
-func autoMigrate(db *gorm.DB) error {
-	return db.AutoMigrate(&postgres.User{}, &postgres.Transaction{}) //теперь должно быть уникальным
 }

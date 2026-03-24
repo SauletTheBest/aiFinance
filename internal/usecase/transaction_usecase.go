@@ -23,7 +23,7 @@ func NewTransactionUsecase(transactionRepo repository.TransactionRepository, use
 }
 
 // CreateTransaction - Create a new transaction for a user
-func (uc *TransactionUsecase) CreateTransaction(ctx context.Context, userID uuid.UUID, amount float64, description string) (*domain.Transaction, error) {
+func (uc *TransactionUsecase) CreateTransaction(ctx context.Context, userID uuid.UUID, amount float64, description string, category string) (*domain.Transaction, error) {
 	// Validate user exists
 	_, err := uc.userRepo.GetByID(ctx, userID)
 	if err != nil {
@@ -35,7 +35,7 @@ func (uc *TransactionUsecase) CreateTransaction(ctx context.Context, userID uuid
 		UserID:      userID,
 		Amount:      amount,
 		Description: description,
-		Category:    "", // Will be set by AI service
+		Category:    category,  // " " Will be set by AI service but i maked manually maybe will change to ""
 		Status:      domain.StatusPending,
 		CreatedAt:   time.Now(),
 	}
@@ -59,7 +59,7 @@ func (uc *TransactionUsecase) GetUserTransactions(ctx context.Context, userID uu
 }
 
 // UpdateTransaction - Update transaction details
-func (uc *TransactionUsecase) UpdateTransaction(ctx context.Context, id uuid.UUID, amount float64, description string) error {
+func (uc *TransactionUsecase) UpdateTransaction(ctx context.Context, id uuid.UUID, amount float64, description string, category string) error {
 	transaction, err := uc.transactionRepo.GetByID(ctx, id)
 	if err != nil {
 		return err
@@ -67,6 +67,7 @@ func (uc *TransactionUsecase) UpdateTransaction(ctx context.Context, id uuid.UUI
 
 	transaction.Amount = amount
 	transaction.Description = description
+	transaction.Category = category
 
 	return uc.transactionRepo.Update(ctx, transaction)
 }

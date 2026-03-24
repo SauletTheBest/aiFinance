@@ -36,8 +36,8 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 		return
 	}
 
-	// Validate request
-	if validationErrors := validator.ValidateTransaction(req.Amount, req.Description); len(validationErrors) > 0 {
+	// Validate request												//
+	if validationErrors := validator.ValidateTransaction(req.Amount, req.Description, req.Category); len(validationErrors) > 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "validation failed",
 			"details": validationErrors,
@@ -45,7 +45,7 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 		return
 	}
 
-	transaction, err := h.TransactionUsecase.CreateTransaction(c.Request.Context(), userID, req.Amount, req.Description)
+	transaction, err := h.TransactionUsecase.CreateTransaction(c.Request.Context(), userID, req.Amount, req.Description, req.Category)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -122,7 +122,7 @@ func (h *TransactionHandler) GetUserTransactions(c *gin.Context) {
 		return
 	}
 
-	// Pagination parameters
+	// Pagination parameters maybe need in future 
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 	
@@ -197,7 +197,7 @@ func (h *TransactionHandler) UpdateTransaction(c *gin.Context) {
 	}
 
 	// Validate request
-	if validationErrors := validator.ValidateUpdateTransaction(&req.Amount, &req.Description); len(validationErrors) > 0 {
+	if validationErrors := validator.ValidateUpdateTransaction(&req.Amount, &req.Description, &req.Category); len(validationErrors) > 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "validation failed",
 			"details": validationErrors,
@@ -218,7 +218,7 @@ func (h *TransactionHandler) UpdateTransaction(c *gin.Context) {
 	}
 
 	// Update transaction
-	err = h.TransactionUsecase.UpdateTransaction(c.Request.Context(), transactionUUID, req.Amount, req.Description)
+	err = h.TransactionUsecase.UpdateTransaction(c.Request.Context(), transactionUUID, req.Amount, req.Description, req.Category)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
