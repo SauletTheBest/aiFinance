@@ -10,5 +10,5 @@ import (
 type StatisticsRepository interface {
 	GetBalance(ctx context.Context, userID uuid.UUID) (*domain.Balance, error)
     GetIncomeExpense(ctx context.Context, userID uuid.UUID, periodStart, periodEnd *time.Time) (float64, float64, error)
-	GetCategoryBreakdown(ctx context.Context, userID uuid.UUID, periodStart, periodEnd *time.Time) ([]*domain.CategoryStats, error)
+	GetCategories(ctx context.Context, userID uuid.UUID, periodStart, periodEnd *time.Time) ([]*domain.CategoryStats, error)
 }

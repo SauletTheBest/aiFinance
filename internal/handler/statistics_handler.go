@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-
+	"time"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/delivery/http/dto"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/usecase"
 )
@@ -47,86 +47,88 @@ func (h *StatisticsHandler) GetBalance(c *gin.Context) {
 }
 
 func (h *StatisticsHandler) GetStatistics(c *gin.Context) {
+	// 1. Получаем user_id из JWT
 	userID, err := getUserID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
 
-	var req dto.StatisticsRequest
-	if err := c.ShouldBindQuery(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// 2. Получаем параметры запроса
+	periodStart, periodEnd, err := h.parsePeriodParams(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid date format"})
 		return
 	}
 
+	// 3. Вызываем бизнес-логику
 	stats, err := h.StatisticsUsecase.GetStatistics(
 		c.Request.Context(),
 		userID,
-		req.PeriodStart,
-		req.PeriodEnd,
+		periodStart,
+		periodEnd,
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	response := dto.StatisticsResponse{
-		Balance: dto.BalanceResponse{
-			Total:     stats.Balance.Total,
-			Currency:  stats.Balance.Currency,
-			UpdatedAt: stats.Balance.UpdatedAt,
-		},
-		Income:      stats.Income,
-		Expenses:    stats.Expenses,
-		NetFlow:     stats.NetFlow,
-		PeriodStart: stats.PeriodStart,
-		PeriodEnd:   stats.PeriodEnd,
-	}
+	expenseCategories := make([]dto.CategoryStatsResponse, len(stats.ExpenseCategories))
+    for i, category := range stats.ExpenseCategories {
+        expenseCategories[i] = dto.CategoryStatsResponse{
+            Category: category.Category,  
+            Amount:   category.Amount,    
+            Count:    category.Count,     
+        }
+    }
+    
+    incomeCategories := make([]dto.CategoryStatsResponse, len(stats.IncomeCategories))
+    for i, category := range stats.IncomeCategories {
+        incomeCategories[i] = dto.CategoryStatsResponse{
+            Category: category.Category, 
+            Amount:   category.Amount,  
+            Count:    category.Count,  
+        }
+    }
 
-	response.CategoryBreakdown = make([]dto.CategoryStatsResponse, len(stats.CategoryBreakdown))
-	for i, category := range stats.CategoryBreakdown {
-		response.CategoryBreakdown[i] = dto.CategoryStatsResponse{
-			Category: category.Category,
-			Amount:   category.Amount,
-			Count:    category.Count,
-		}
-	}
-
-	c.JSON(http.StatusOK, gin.H{"statistics": response})
+	// 4. Возвращаем результат
+	c.JSON(http.StatusOK, gin.H{
+        "balance": gin.H{
+            "total":      stats.Balance.Total,
+            "currency":   stats.Balance.Currency,
+            "updated_at": stats.Balance.UpdatedAt,
+        },
+        "income":   stats.Income,
+        "expenses": stats.Expenses,
+        "net_flow": stats.NetFlow,
+        
+        "expense_categories": expenseCategories, 
+        "income_categories":  incomeCategories,  
+        
+        "period_start": stats.PeriodStart,
+        "period_end":   stats.PeriodEnd,
+    })
 }
 
-func (h *StatisticsHandler) GetCategoryBreakdown(c *gin.Context) {
-	userID, err := getUserID(c)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
-	}
 
-	var req dto.StatisticsRequest
-	if err := c.ShouldBindQuery(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
+func (h *StatisticsHandler) parsePeriodParams(c *gin.Context) (*time.Time, *time.Time, error) {
+	var periodStart, periodEnd *time.Time
 
-	categoryStats, err := h.StatisticsUsecase.GetCategoryBreakdown(
-		c.Request.Context(),
-		userID,
-		req.PeriodStart,
-		req.PeriodEnd,
-	)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	response := make([]dto.CategoryStatsResponse, len(categoryStats))
-	for i, category := range categoryStats {
-		response[i] = dto.CategoryStatsResponse{
-			Category: category.Category,
-			Amount:   category.Amount,
-			Count:    category.Count,
+	if start := c.Query("start"); start != "" {
+		if t, err := time.Parse("2006-01-02", start); err == nil {
+			periodStart = &t
+		} else {
+			return nil, nil, err
 		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"category_breakdown": response})
+	if end := c.Query("end"); end != "" {
+		if t, err := time.Parse("2006-01-02", end); err == nil {
+			periodEnd = &t
+		} else {
+			return nil, nil, err
+		}
+	}
+
+	return periodStart, periodEnd, nil
 }

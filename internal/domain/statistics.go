@@ -13,7 +13,8 @@ type Balance struct {
 type CategoryStats struct {
 	Category string 
 	Amount   float64 
-	Count    int     
+	Count    int
+	Type 	 string
 }
 
 type Statistics struct {
@@ -21,7 +22,8 @@ type Statistics struct {
 	Income            float64         
 	Expenses          float64         
 	NetFlow           float64         
-	CategoryBreakdown []*CategoryStats 
+	ExpenseCategories []*CategoryStats
+	IncomeCategories  []*CategoryStats
 	PeriodStart       time.Time       
 	PeriodEnd         time.Time       
 }

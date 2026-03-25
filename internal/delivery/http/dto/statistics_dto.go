@@ -24,7 +24,8 @@ type StatisticsResponse struct {
 	Income            float64                 `json:"income"`
 	Expenses          float64                 `json:"expenses"`
 	NetFlow           float64                 `json:"net_flow"`
-	CategoryBreakdown []CategoryStatsResponse `json:"category_breakdown"`
+	ExpenseCategories []CategoryStatsResponse `json:"expense_categories"`
+	IncomeCategories  []CategoryStatsResponse `json:"income_categories"`
 	PeriodStart       time.Time               `json:"period_start"`
 	PeriodEnd         time.Time               `json:"period_end"`
 }

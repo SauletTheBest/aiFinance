@@ -122,28 +122,33 @@ func (r *StatisticsRepo) GetIncomeExpense(
 }
 
 // Разбивка по категориям
-func (r *StatisticsRepo) GetCategoryBreakdown(
+func (r *StatisticsRepo) GetCategories(
 	ctx context.Context,
 	userID uuid.UUID,
 	periodStart, periodEnd *time.Time,
 ) ([]*domain.CategoryStats, error) {
 
-	var models []categoryStatsModel
+	var models []struct {
+		Category string
+		Type     string
+		Amount   float64
+		Count    int64
+	}
 
 	query := r.db.WithContext(ctx).
 		Table("transactions").
 		Select(`
 			category,
-			COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as amount,
+			type,
+			COALESCE(SUM(amount), 0) as amount,
 			COUNT(*) as count
 		`).
 		Where("user_id = ? AND category != ''", userID).
-		Group("category")
+		Group("category, type")
 
 	if periodStart != nil {
 		query = query.Where("created_at >= ?", *periodStart)
 	}
-
 	if periodEnd != nil {
 		query = query.Where("created_at <= ?", *periodEnd)
 	}
@@ -154,7 +159,12 @@ func (r *StatisticsRepo) GetCategoryBreakdown(
 
 	result := make([]*domain.CategoryStats, len(models))
 	for i, m := range models {
-		result[i] = toCategoryDomain(&m)
+		result[i] = &domain.CategoryStats{
+			Category: m.Category,
+			Type:     m.Type,
+			Amount:   m.Amount,
+			Count:    int(m.Count),
+		}
 	}
 
 	return result, nil
