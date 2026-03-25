@@ -100,7 +100,7 @@ func (r *StatisticsRepo) GetIncomeExpense(
 		Table("transactions").
 		Select(`
 			COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END), 0) as income,
-			COALESCE(SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END), 0) as expenses
+			COALESCE(SUM(CASE WHEN amount < 0 THEN -amount ELSE 0 END), 0) as expenses
 		`).
 		Where("user_id = ?", userID)
 

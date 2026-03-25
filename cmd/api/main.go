@@ -56,7 +56,7 @@ func main() {
 	
 	userUsecase := usecase.NewUserUseCase(userRepo)
 	
-	statisticsUsecase := usecase.NewStatisticsUsecase(statisticsRepo, transactionRepo)
+	statisticsUsecase := usecase.NewStatisticsUsecase(statisticsRepo, transactionRepo, userRepo)
 	
 	transactionUsecase := usecase.NewTransactionUsecase(transactionRepo, userRepo)
 	
