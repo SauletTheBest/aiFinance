@@ -1,19 +1,17 @@
 package db
 
-
 import (
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
-	"path/filepath"
-	"io/fs"
-	"fmt"
 	"log"
 	"os"
+	"path/filepath"
+	"sort"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 func NewPostgres(dsn string) (*gorm.DB, error) {
-	
-	db,  err :=  gorm.Open(postgres.Open(dsn), &gorm.Config{})
+
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		return nil, err
 	}
@@ -21,34 +19,48 @@ func NewPostgres(dsn string) (*gorm.DB, error) {
 }
 
 func RunMigrations(db *gorm.DB) error {
-	// Get the database connection
-	sqlDB, err := db.DB()
-	if err != nil {
-		return fmt.Errorf("failed to get database connection: %w", err)
+    sqlDB, err := db.DB()
+    if err != nil {
+        return err
+    }
+
+    migrationsDir := "../../internal/db/migrations"
+
+    log.Printf("Looking for migrations in: %s", migrationsDir)
+
+	wd, _ := os.Getwd()
+	log.Println("WORKDIR:", wd)
+
+	log.Println("Checking migrations dir exists:", migrationsDir)
+
+	if _, err := os.Stat(migrationsDir); err != nil {
+		log.Println("MIGRATIONS DIR ERROR:", err)
 	}
 
-	// Read all migration files
-	migrationsDir := "internal/db/migrations"
-	files, err := filepath.Glob(filepath.Join(migrationsDir, "*.up.sql"))
-	if err != nil {
-		return fmt.Errorf("failed to read migration files: %w", err)
-	}
+    files, err := filepath.Glob(filepath.Join(migrationsDir, "*.up.sql"))
+    if err != nil {
+        return err
+    }
 
-	// Execute migrations in order
-	for _, file := range files {
-		content, err := fs.ReadFile(os.DirFS("."), file)
-		if err != nil {
-			return fmt.Errorf("failed to read migration file %s: %w", file, err)
-		}
+    sort.Strings(files)
 
-		log.Printf("Executing migration: %s", file)
-		_, err = sqlDB.Exec(string(content))
+    log.Printf("Found %d migration files: %v", len(files), files)
 
-		if err !=  nil {
-			return fmt.Errorf("failed to execute migration %s: %w", file, err)
-		}
-	}
+    for _, file := range files {
+        log.Printf("Executing migration: %s", file)
 
-	log.Println("All migrations completed successfully")
-	return nil
+        content, err := os.ReadFile(file) 
+        if err != nil {
+            return err
+        }
+
+        _, err = sqlDB.Exec(string(content))
+        if err != nil {
+            return err
+        }
+
+        log.Printf("Migration %s executed successfully", file)
+    }
+
+    return nil
 }

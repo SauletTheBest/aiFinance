@@ -23,7 +23,7 @@ func NewTransactionUsecase(transactionRepo repository.TransactionRepository, use
 }
 
 // CreateTransaction - Create a new transaction for a user
-func (uc *TransactionUsecase) CreateTransaction(ctx context.Context, userID uuid.UUID, amount float64, description string, category string) (*domain.Transaction, error) {
+func (uc *TransactionUsecase) CreateTransaction(ctx context.Context, userID uuid.UUID, amount float64, description string, category string, transactionType string) (*domain.Transaction, error) {
 	// Validate user exists
 	_, err := uc.userRepo.GetByID(ctx, userID)
 	if err != nil {
@@ -36,6 +36,7 @@ func (uc *TransactionUsecase) CreateTransaction(ctx context.Context, userID uuid
 		Amount:      amount,
 		Description: description,
 		Category:    category,  // " " Will be set by AI service but i maked manually maybe will change to ""
+		Type:  		 domain.TransactionType(transactionType),
 		Status:      domain.StatusPending,
 		CreatedAt:   time.Now(),
 	}

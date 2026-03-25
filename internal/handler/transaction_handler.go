@@ -36,8 +36,8 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 		return
 	}
 
-	// Validate request												//
-	if validationErrors := validator.ValidateTransaction(req.Amount, req.Description, req.Category); len(validationErrors) > 0 {
+	// Validate request												
+	if validationErrors := validator.ValidateTransaction(req.Amount, req.Description, req.Category, req.Type); len(validationErrors) > 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "validation failed",
 			"details": validationErrors,
@@ -45,7 +45,7 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 		return
 	}
 
-	transaction, err := h.TransactionUsecase.CreateTransaction(c.Request.Context(), userID, req.Amount, req.Description, req.Category)
+	transaction, err := h.TransactionUsecase.CreateTransaction(c.Request.Context(), userID, req.Amount, req.Description, req.Category, req.Type)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -56,6 +56,7 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 		Amount:      transaction.Amount,
 		Description: transaction.Description,
 		Category:    transaction.Category,
+		Type:        string(transaction.Type),
 		Status:      string(transaction.Status),
 		CreatedAt:   transaction.CreatedAt,
 	}
@@ -101,6 +102,7 @@ func (h *TransactionHandler) GetTransaction(c *gin.Context) {
 		Amount:      transaction.Amount,
 		Description: transaction.Description,
 		Category:    transaction.Category,
+		Type:        string(transaction.Type),
 		Status:      string(transaction.Status),
 		CreatedAt:   transaction.CreatedAt,
 	}
@@ -157,6 +159,7 @@ func (h *TransactionHandler) GetUserTransactions(c *gin.Context) {
 			Description: transaction.Description,
 			Category:    transaction.Category,
 			Status:      string(transaction.Status),
+			Type: 		 string(transaction.Type),
 			CreatedAt:   transaction.CreatedAt,
 		})
 	}

@@ -73,7 +73,9 @@ func (r *StatisticsRepo) GetBalance(ctx context.Context, userID uuid.UUID) (*dom
 	err := r.db.WithContext(ctx).
 		Table("transactions").
 		Select(`
-			COALESCE(SUM(amount), 0) as total,
+			COALESCE(SUM(CASE WHEN type = 'income' THEN amount 
+			WHEN type = 'expense' THEN -amount 
+			ELSE 0 END), 0) as total,
 			MAX(created_at) as updated_at
 		`).
 		Where("user_id = ?", userID).
@@ -99,8 +101,8 @@ func (r *StatisticsRepo) GetIncomeExpense(
 	query := r.db.WithContext(ctx).
 		Table("transactions").
 		Select(`
-			COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END), 0) as income,
-			COALESCE(SUM(CASE WHEN amount < 0 THEN -amount ELSE 0 END), 0) as expenses
+			COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as income,
+			COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as expenses
 		`).
 		Where("user_id = ?", userID)
 
@@ -132,7 +134,7 @@ func (r *StatisticsRepo) GetCategoryBreakdown(
 		Table("transactions").
 		Select(`
 			category,
-			COALESCE(SUM(amount), 0) as amount,
+			COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as amount,
 			COUNT(*) as count
 		`).
 		Where("user_id = ? AND category != ''", userID).

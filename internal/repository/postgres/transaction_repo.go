@@ -15,13 +15,14 @@ type TransactionRepo struct {
 }
 
 type Transaction struct {
-	ID uuid.UUID `gorm:"type:uuid;primaryKey"`
-	UserID uuid.UUID `gorm:"type:uuid;index"`
-	Amount float64
+	ID 			uuid.UUID `gorm:"type:uuid;primaryKey"`
+	UserID 		uuid.UUID `gorm:"type:uuid;index"`
+	Amount 		float64
 	Description string
-	Category string
-	Status domain.TransactionStatus
-	CreatedAt time.Time
+	Category 	string
+	Type		domain.TransactionType `gorm:"type:varchar(10)"`
+	Status 		domain.TransactionStatus
+	CreatedAt 	time.Time
 }
 
 func transactionToDomain(model *Transaction) *domain.Transaction {
@@ -31,6 +32,7 @@ func transactionToDomain(model *Transaction) *domain.Transaction {
 		Amount: 		model.Amount,
 		Description:	model.Description,
 		Category: 		model.Category,
+		Type:			model.Type,
 		Status: 		model.Status,
 		CreatedAt: 		model.CreatedAt,
 	}
@@ -43,6 +45,7 @@ func transactionToModel(transaction *domain.Transaction) *Transaction {
 		Amount: 		transaction.Amount,
 		Description:	transaction.Description,
 		Category: 		transaction.Category,
+		Type:			transaction.Type,
 		Status: 		transaction.Status,
 		CreatedAt: 		transaction.CreatedAt,
 	}

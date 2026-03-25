@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 )
-
+type TransactionType string //
 type TransactionStatus string //custom type
 
 const (
@@ -16,12 +16,18 @@ const (
 	StatusCategorized TransactionStatus = "CATEGORIZED"
 )
 
+const (
+	Income TransactionType = "income"
+	Expense TransactionType = "expense"
+)
+
 type Transaction struct {
 	ID uuid.UUID
 	UserID uuid.UUID
 	Amount float64
 	Description string
 	Category string
+	Type TransactionType
 	Status TransactionStatus
 	CreatedAt time.Time
 }

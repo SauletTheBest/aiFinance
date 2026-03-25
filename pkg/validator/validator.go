@@ -55,14 +55,12 @@ func ValidateRegistration(name, email, password, currency string) []*ValidationE
 	return errors
 }
 
-func ValidateTransaction(amount float64, description string, category string) []*ValidationError {
+func ValidateTransaction(amount float64, description string, category string, transactionType string) []*ValidationError {
 	var errors []*ValidationError
 
 	// Amount validation
 	if amount == 0 {
 		errors = append(errors, &ValidationError{Field: "amount", Message: "amount cannot be zero"})
-	} else if amount < -999999999 {
-		errors = append(errors, &ValidationError{Field: "amount", Message: "expense amount is too large"})
 	} else if amount > 999999999 {
 		errors = append(errors, &ValidationError{Field: "amount", Message: "income amount is too large"})
 	}
@@ -81,6 +79,10 @@ func ValidateTransaction(amount float64, description string, category string) []
 		errors = append(errors, &ValidationError{Field: "category", Message: "category must be less than 30 characters"})
 	}
 
+	if transactionType != "income" && transactionType != "expense" {
+		errors = append(errors, &ValidationError{Field: "transaction type", Message: "transaction type is invalid"})
+	} 
+
 	return errors
 }
 
@@ -91,8 +93,6 @@ func ValidateUpdateTransaction(amount *float64, description *string, category *s
 	if amount != nil {
 		if *amount == 0 {
 			errors = append(errors, &ValidationError{Field: "amount", Message: "amount cannot be zero"})
-		} else if *amount < -999999999 {
-			errors = append(errors, &ValidationError{Field: "amount", Message: "expense amount is too large"})
 		} else if *amount > 999999999 {
 			errors = append(errors, &ValidationError{Field: "amount", Message: "income amount is too large"})
 		}

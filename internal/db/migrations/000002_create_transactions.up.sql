@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     amount DOUBLE PRECISION NOT NULL,
     description TEXT,
     category TEXT,
+    type TEXT NOT NULL,
     status TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT now(),
 
@@ -13,5 +14,5 @@ CREATE TABLE IF NOT EXISTS transactions (
         ON DELETE CASCADE
 );
 
-CREATE INDEX idx_transactions_user_id ON transactions(user_id);
-CREATE INDEX idx_transactions_category ON transactions(category);
+CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category);
