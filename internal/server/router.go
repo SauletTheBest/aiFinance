@@ -28,8 +28,6 @@ func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHand
 	protected := router.Group("/api")
 	protected.Use(middleware.AuthMiddleware(jwtSvc))
 	{
-		// Add protected routes here
-		// Example: protected.GET("/profile", profileHandler.GetProfile)
 
 		protected.GET("/profile", userHandler.GetProfile)
 		protected.POST("/profile", userHandler.UpdateProfile)

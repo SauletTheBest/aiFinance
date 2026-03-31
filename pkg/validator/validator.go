@@ -2,7 +2,8 @@ package validator
 
 import (
 	"net/mail"
-	"regexp" // можно потом добавить полноценную валидацию
+	"regexp" 
+	"time"
 )
 
 type ValidationError struct {
@@ -114,3 +115,42 @@ func ValidateUpdateTransaction(amount *float64, description *string, category *s
 
 	return errors
 }
+
+func ValidatePeriodDates(startStr, endStr string) (*time.Time, *time.Time, []*ValidationError) {
+    var errors []*ValidationError
+    var periodStart, periodEnd *time.Time
+    
+    if startStr != "" {
+        start, err := time.Parse("2006-01-02", startStr)
+        if err != nil {
+            errors = append(errors, &ValidationError{
+                Field:   "start",
+                Message: "invalid start date format, expected YYYY-MM-DD",
+            })
+        } else {
+            periodStart = &start
+        }
+    }
+    
+    if endStr != "" {
+        end, err := time.Parse("2006-01-02", endStr)
+        if err != nil {
+            errors = append(errors, &ValidationError{
+                Field:   "end",
+                Message: "invalid end date format, expected YYYY-MM-DD",
+            })
+        } else {
+            periodEnd = &end
+        }
+    }
+    
+    if periodStart != nil && periodEnd != nil && periodStart.After(*periodEnd) {
+        errors = append(errors, &ValidationError{
+            Field:   "period",
+            Message: "start date must be before end date",
+        })
+    }
+    
+    return periodStart, periodEnd, errors
+}
+
