@@ -19,10 +19,6 @@ func NewStatisticsRepo(db *gorm.DB) repository.StatisticsRepository {
 	return &StatisticsRepo{db: db}
 }
 
-//
-// ===== MODELS (под результаты SQL) =====
-//
-
 type balanceModel struct {
 	UserID    uuid.UUID
 	Total     float64
@@ -41,10 +37,6 @@ type categoryStatsModel struct {
 	Count    int64
 }
 
-//
-// ===== MAPPERS (model → domain) =====
-//
-
 func toBalanceDomain(m *balanceModel) *domain.Balance {
 	return &domain.Balance{
 		UserID:    m.UserID.String(),
@@ -62,11 +54,6 @@ func toCategoryDomain(m *categoryStatsModel) *domain.CategoryStats {
 	}
 }
 
-//
-// ===== METHODS =====
-//
-
-// Баланс пользователя
 func (r *StatisticsRepo) GetBalance(ctx context.Context, userID uuid.UUID) (*domain.Balance, error) {
 	var result balanceModel
 
@@ -89,7 +76,6 @@ func (r *StatisticsRepo) GetBalance(ctx context.Context, userID uuid.UUID) (*dom
 	return toBalanceDomain(&result), nil
 }
 
-// Доходы и расходы
 func (r *StatisticsRepo) GetIncomeExpense(
 	ctx context.Context,
 	userID uuid.UUID,
@@ -121,7 +107,6 @@ func (r *StatisticsRepo) GetIncomeExpense(
 	return result.Income, result.Expenses, nil
 }
 
-// Разбивка по категориям
 func (r *StatisticsRepo) GetCategories(
 	ctx context.Context,
 	userID uuid.UUID,

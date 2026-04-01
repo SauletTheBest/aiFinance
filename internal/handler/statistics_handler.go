@@ -70,14 +70,20 @@ func (h *StatisticsHandler) GetStatistics(c *gin.Context) {
 		return
 	}
 
-	startStr := c.Query("start")
-	endStr := c.Query("end")
 
-	start, end, validationErrors := validator.ValidatePeriodDates(startStr, endStr)
+	var req dto.StatisticsRequest
+	
+	if err := c.ShouldBindQuery(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error":"invalid query params"})
+		return
+	}
+
+	start, end, validationErrors := validator.ValidatePeriodDates(req.PeriodStart, req.PeriodEnd)
 	if len(validationErrors) > 0 {
 		writeValidationErrors(c, validationErrors)
 		return
 	}
+	
 
 	stats, err := h.StatisticsUsecase.GetStatistics(
 		c.Request.Context(),
@@ -85,6 +91,7 @@ func (h *StatisticsHandler) GetStatistics(c *gin.Context) {
 		start,
 		end,
 	)
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -101,8 +108,8 @@ func (h *StatisticsHandler) GetStatistics(c *gin.Context) {
 		NetFlow:           stats.NetFlow,
 		ExpenseCategories: mapper.ToCategoryDTO(stats.ExpenseCategories),
 		IncomeCategories:  mapper.ToCategoryDTO(stats.IncomeCategories),
-		PeriodStart:       stats.PeriodStart,
-		PeriodEnd:         stats.PeriodEnd,
+		PeriodStart:       start,
+		PeriodEnd:         end,
 	}
 
 	c.JSON(http.StatusOK, resp)

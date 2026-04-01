@@ -3,8 +3,8 @@ package dto
 import "time"
 
 type StatisticsRequest struct {
-	PeriodStart *time.Time `json:"period_start,omitempty"`
-	PeriodEnd   *time.Time `json:"period_end,omitempty"`
+    PeriodStart string `form:"period_start" json:"period_start,omitempty"`
+    PeriodEnd   string `form:"period_end" json:"period_end,omitempty"`
 }
 
 type BalanceResponse struct {
@@ -26,7 +26,7 @@ type StatisticsResponse struct {
 	NetFlow           float64                 `json:"net_flow"`
 	ExpenseCategories []CategoryStatsResponse `json:"expense_categories"`
 	IncomeCategories  []CategoryStatsResponse `json:"income_categories"`
-	PeriodStart       time.Time               `json:"period_start"`
-	PeriodEnd         time.Time               `json:"period_end"`
+	PeriodStart       *time.Time               `json:"period_start,omitempty"`
+	PeriodEnd         *time.Time               `json:"period_end,omitempty"`
 }
 
