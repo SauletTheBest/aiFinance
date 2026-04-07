@@ -2,7 +2,7 @@ package validator
 
 import (
 	"net/mail"
-	"regexp" 
+	"regexp"
 	"time"
 )
 
@@ -56,7 +56,7 @@ func ValidateRegistration(name, email, password, currency string) []*ValidationE
 	return errors
 }
 
-func ValidateTransaction(amount float64, description string, category string, transactionType string) []*ValidationError {
+func ValidateTransaction(amount float64, description string, category string, transactionType string, createdAt time.Time) []*ValidationError {
 	var errors []*ValidationError
 
 	// Amount validation
@@ -80,14 +80,24 @@ func ValidateTransaction(amount float64, description string, category string, tr
 		errors = append(errors, &ValidationError{Field: "category", Message: "category must be less than 30 characters"})
 	}
 
+	//type
 	if transactionType != "income" && transactionType != "expense" {
 		errors = append(errors, &ValidationError{Field: "transaction type", Message: "transaction type is invalid"})
-	} 
-
+	}
+	//validate date
+	if !createdAt.IsZero() {
+        if createdAt.After(time.Now()) {
+            errors = append(errors, &ValidationError{Field: "created_at", Message: "created_at cannot be in the future"})
+        }
+    // Optional: check for unreasonably old dates (before year 2000)
+        if createdAt.Before(time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)) {
+            errors = append(errors, &ValidationError{Field: "created_at", Message: "created_at is too far in the past"})
+        }
+}
 	return errors
 }
 
-func ValidateUpdateTransaction(amount *float64, description *string, category *string) []*ValidationError {
+func ValidateUpdateTransaction(amount *float64, description *string, category *string, createdAt *time.Time) []*ValidationError {
 	var errors []*ValidationError
 
 	// Amount validation (if provided)
@@ -113,44 +123,55 @@ func ValidateUpdateTransaction(amount *float64, description *string, category *s
 		errors = append(errors, &ValidationError{Field: "category", Message: "category must be less than 30 characters"})
 	}
 
+	//type
+
+	//date
+	if createdAt != nil && !createdAt.IsZero() {
+        if createdAt.After(time.Now()) {
+            errors = append(errors, &ValidationError{Field: "created_at", Message: "created_at cannot be in the future"})
+        }
+        if createdAt.Before(time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)) {
+            errors = append(errors, &ValidationError{Field: "created_at", Message: "created_at is too far in the past"})
+        }
+}
+
 	return errors
 }
 
 func ValidatePeriodDates(startStr, endStr string) (*time.Time, *time.Time, []*ValidationError) {
-    var errors []*ValidationError
-    var periodStart, periodEnd *time.Time
-    
-    if startStr != "" {
-        start, err := time.Parse("2006-01-02", startStr)
-        if err != nil {
-            errors = append(errors, &ValidationError{
-                Field:   "start",
-                Message: "invalid start date format, expected YYYY-MM-DD",
-            })
-        } else {
-            periodStart = &start
-        }
-    }
-    
-    if endStr != "" {
-        end, err := time.Parse("2006-01-02", endStr)
-        if err != nil {
-            errors = append(errors, &ValidationError{
-                Field:   "end",
-                Message: "invalid end date format, expected YYYY-MM-DD",
-            })
-        } else {
-            periodEnd = &end
-        }
-    }
-    
-    if periodStart != nil && periodEnd != nil && periodStart.After(*periodEnd) {
-        errors = append(errors, &ValidationError{
-            Field:   "period",
-            Message: "start date must be before end date",
-        })
-    }
-    
-    return periodStart, periodEnd, errors
-}
+	var errors []*ValidationError
+	var periodStart, periodEnd *time.Time
 
+	if startStr != "" {
+		start, err := time.Parse("2006-01-02", startStr)
+		if err != nil {
+			errors = append(errors, &ValidationError{
+				Field:   "start",
+				Message: "invalid start date format, expected YYYY-MM-DD",
+			})
+		} else {
+			periodStart = &start
+		}
+	}
+
+	if endStr != "" {
+		end, err := time.Parse("2006-01-02", endStr)
+		if err != nil {
+			errors = append(errors, &ValidationError{
+				Field:   "end",
+				Message: "invalid end date format, expected YYYY-MM-DD",
+			})
+		} else {
+			periodEnd = &end
+		}
+	}
+
+	if periodStart != nil && periodEnd != nil && periodStart.After(*periodEnd) {
+		errors = append(errors, &ValidationError{
+			Field:   "period",
+			Message: "start date must be before end date",
+		})
+	}
+
+	return periodStart, periodEnd, errors
+}

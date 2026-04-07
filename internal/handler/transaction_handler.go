@@ -37,7 +37,7 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 	}
 
 	// Validate request												
-	if validationErrors := validator.ValidateTransaction(req.Amount, req.Description, req.Category, req.Type); len(validationErrors) > 0 {
+	if validationErrors := validator.ValidateTransaction(req.Amount, req.Description, req.Category, req.Type, req.CreatedAt); len(validationErrors) > 0 { //валидация для времени? 
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "validation failed",
 			"details": validationErrors,
@@ -45,7 +45,7 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 		return
 	}
 
-	transaction, err := h.TransactionUsecase.CreateTransaction(c.Request.Context(), userID, req.Amount, req.Description, req.Category, req.Type)
+	transaction, err := h.TransactionUsecase.CreateTransaction(c.Request.Context(), userID, req.Amount, req.Description, req.Category, req.Type, req.CreatedAt)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -200,7 +200,7 @@ func (h *TransactionHandler) UpdateTransaction(c *gin.Context) {
 	}
 
 	// Validate request
-	if validationErrors := validator.ValidateUpdateTransaction(&req.Amount, &req.Description, &req.Category); len(validationErrors) > 0 {
+	if validationErrors := validator.ValidateUpdateTransaction(&req.Amount, &req.Description, &req.Category, &req.CreatedAt); len(validationErrors) > 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "validation failed",
 			"details": validationErrors,
@@ -221,7 +221,7 @@ func (h *TransactionHandler) UpdateTransaction(c *gin.Context) {
 	}
 
 	// Update transaction
-	err = h.TransactionUsecase.UpdateTransaction(c.Request.Context(), transactionUUID, req.Amount, req.Description, req.Category)
+	err = h.TransactionUsecase.UpdateTransaction(c.Request.Context(), transactionUUID, req.Amount, req.Description, req.Category, req.CreatedAt)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

@@ -20,12 +20,12 @@ type CategoryStatsResponse struct {
 }
 
 type StatisticsResponse struct {
-	Balance           BalanceResponse         `json:"balance"`
-	Income            float64                 `json:"income"`
-	Expenses          float64                 `json:"expenses"`
-	NetFlow           float64                 `json:"net_flow"`
-	ExpenseCategories []CategoryStatsResponse `json:"expense_categories"`
-	IncomeCategories  []CategoryStatsResponse `json:"income_categories"`
+	Balance           BalanceResponse          `json:"balance"`
+	Income            float64                  `json:"income"`
+	Expenses          float64                  `json:"expenses"`
+	NetFlow           float64                  `json:"net_flow"`
+	ExpenseCategories []CategoryStatsResponse  `json:"expense_categories"`
+	IncomeCategories  []CategoryStatsResponse  `json:"income_categories"`
 	PeriodStart       *time.Time               `json:"period_start,omitempty"`
 	PeriodEnd         *time.Time               `json:"period_end,omitempty"`
 }
