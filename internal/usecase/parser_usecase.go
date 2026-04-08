@@ -83,100 +83,164 @@ func (uc *ParserUseCase) parseKaspiPDF(userID uuid.UUID, filePath string) ([]*do
 //   Line 2: Amount (e.g. "- 40 000,00 ₸")
 //   Line 3: Operation type (Перевод, Покупка, Пополнение, Снятие)
 //   Line 4: Details (На Kaspi Депозит, Ясмін, etc.)
+// extractTransactions собирает транзакции, используя Zip-подход для обхода колоночного текста
 func extractTransactions(userID uuid.UUID, lines []string) ([]*domain.Transaction, error) {
 	var transactions []*domain.Transaction
 
-	dateRe := regexp.MustCompile(`^(\d{2}\.\d{2}\.\d{2})$`)
-	amountRe := regexp.MustCompile(`^([+-]?\s*[\d\s]+,\d{2})\s*₸$`)
+	// Наши "корзины" для колонок
+	var dates []string
+	var amounts []string
+	var categories []string
+	var details []string
 
-	for i := 0; i < len(lines); i++ {
-		line := strings.TrimSpace(lines[i])
-		if line == "" {
+	dateRe := regexp.MustCompile(`^(\d{2}\.\d{2}\.\d{2})$`)
+	// Ловит любые суммы, игнорируя съехавшие минусы (напр. "18 - 850,00 T" или "0,00 T")
+	amountRe := regexp.MustCompile(`^[\d\s\p{Z}+-]+,\d{2}`)
+
+	inTable := false
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		
+		// Игнорируем пустые строки и артефакты PDF-парсера (например, одиночные дефисы)
+		if line == "" || line == "-" {
 			continue
 		}
 
-		// Look for a date line, then read the next 3 lines
-		if dateRe.MatchString(line) {
-			dateStr := line
-
-			if i+3 < len(lines) {
-				amountLine := strings.TrimSpace(lines[i+1])
-				operationLine := strings.TrimSpace(lines[i+2])
-				detailsLine := strings.TrimSpace(lines[i+3])
-
-				if amountRe.MatchString(amountLine) {
-					amount := parseKaspiAmount(amountLine)
-
-					tType := domain.Expense
-					if amount > 0 {
-						tType = domain.Income
-					}
-
-					// Always store amount as positive — Type field determines direction
-					if amount < 0 {
-						amount = -amount
-					}
-
-					dateParsed, err := time.Parse("02.01.06", dateStr)
-					if err != nil {
-						dateParsed = time.Now()
-					}
-
-					tx := &domain.Transaction{
-						ID:          uuid.New(),
-						UserID:      userID,
-						Amount:      amount,
-						Description: detailsLine,
-						Category:    operationLine,
-						Type:        tType,
-						Status:      domain.StatusCategorized,
-						CreatedAt:   dateParsed,
-					}
-
-					transactions = append(transactions, tx)
-
-					// Skip the 3 lines we just consumed
-					i += 3
-					continue
-				}
-			}
+		// Триггер начала таблицы: либо заголовок "Детали", либо первая найденная дата.
+		// Это позволяет проигнорировать все сводные суммы из начала выписки.
+		if line == "Детали" || dateRe.MatchString(line) {
+			inTable = true
 		}
+
+		if !inTable {
+			continue
+		}
+
+		// Игнорируем колонтитулы следующей страницы и системный текст
+		if isKaspiSystemText(line) {
+			continue
+		}
+
+		// Распределяем данные по корзинам
+		if dateRe.MatchString(line) {
+			dates = append(dates, line)
+		} else if amountRe.MatchString(line) {
+			amounts = append(amounts, line)
+		} else if isKaspiCategory(line) {
+			categories = append(categories, line)
+		} else {
+			// Всё, что не попало в регулярки выше — это детали транзакции (имена, магазины)
+			details = append(details, line)
+		}
+	}
+
+	// Находим минимальную длину, чтобы избежать паники, если парсер где-то проглотил строку
+	minLen := len(dates)
+	if len(amounts) < minLen { minLen = len(amounts) }
+	if len(categories) < minLen { minLen = len(categories) }
+	if len(details) < minLen { minLen = len(details) }
+
+	// Оставляем логгирование для отладки
+	if len(dates) != len(amounts) || len(amounts) != len(categories) || len(categories) != len(details) {
+		fmt.Printf("Warning: Column length mismatch! Dates: %d, Amounts: %d, Categories: %d, Details: %d\n",
+			len(dates), len(amounts), len(categories), len(details))
+	}
+
+	// Сшиваем транзакции вместе (Zip)
+	for i := 0; i < minLen; i++ {
+		amount := parseKaspiAmount(amounts[i])
+
+		tType := domain.Expense
+		if amount > 0 {
+			tType = domain.Income
+		}
+
+		// В БД всегда сохраняем сумму как положительную
+		if amount < 0 {
+			amount = -amount
+		}
+
+		dateParsed, err := time.Parse("02.01.06", dates[i])
+		if err != nil {
+			dateParsed = time.Now()
+		}
+
+		tx := &domain.Transaction{
+			ID:          uuid.New(),
+			UserID:      userID,
+			Amount:      amount,
+			Description: details[i],
+			Category:    categories[i],
+			Type:        tType,
+			Status:      domain.StatusCategorized,
+			CreatedAt:   dateParsed,
+		}
+
+		transactions = append(transactions, tx)
 	}
 
 	return transactions, nil
 }
 
-// parseKaspiAmount converts Kaspi-formatted amount strings to float64.
-// Handles non-breaking spaces (U+00A0) that PDFs use between digit groups.
-// Examples: "- 40 000,00 ₸" -> -40000.00, "+ 5 000,00 ₸" -> 5000.00
+// parseKaspiAmount стала "пуленепробиваемой"
 func parseKaspiAmount(s string) float64 {
-	// Strip the ₸ sign
-	s = strings.ReplaceAll(s, "₸", "")
-	s = strings.TrimSpace(s)
-
 	sign := 1.0
-	if strings.HasPrefix(s, "-") {
+	// Если минус есть где угодно (даже если он съехал внутрь: "18 - 850") — это трата
+	if strings.Contains(s, "-") {
 		sign = -1.0
-		s = strings.TrimPrefix(s, "-")
-	} else if strings.HasPrefix(s, "+") {
-		s = strings.TrimPrefix(s, "+")
 	}
 
-	// Strip ALL unicode whitespace (including non-breaking space U+00A0 from PDFs)
-	s = strings.Map(func(r rune) rune {
-		if r == ' ' || r == '\t' || r == '\u00A0' || r == '\u202F' || r == '\u2009' {
-			return -1
+	// Жестко вытаскиваем только цифры и запятую (убивает "T", "₸", "〒", любые пробелы и буквы)
+	var builder strings.Builder
+	for _, r := range s {
+		if (r >= '0' && r <= '9') || r == ',' {
+			builder.WriteRune(r)
 		}
-		return r
-	}, s)
+	}
 
-	// Comma -> period for float conversion
-	s = strings.ReplaceAll(s, ",", ".")
-	s = strings.TrimSpace(s)
+	cleanStr := strings.ReplaceAll(builder.String(), ",", ".")
 
-	val, err := strconv.ParseFloat(s, 64)
+	val, err := strconv.ParseFloat(cleanStr, 64)
 	if err != nil {
 		return 0
 	}
 	return sign * val
+}
+
+// Вспомогательная функция проверки категорий
+func isKaspiCategory(s string) bool {
+	// Каспи использует ограниченный пул категорий
+	categories := []string{"Пополнение", "Перевод", "Покупка", "Снятие", "Вознаграждение", "Комиссия"}
+	for _, c := range categories {
+		if s == c {
+			return true
+		}
+	}
+	return false
+}
+
+// Вспомогательная функция для отсева футеров и шапок страниц
+func isKaspiSystemText(s string) bool {
+	lower := strings.ToLower(s)
+
+	exactMatches := []string{
+		"дата", "сумма", "операция", "детали",
+	}
+	for _, text := range exactMatches {
+		if lower == text {
+			return true
+		}
+	}
+
+	// Отсеиваем служебные подписи снизу страниц
+	if strings.Contains(lower, "kaspi bank") ||
+		strings.Contains(lower, "бик caspkzka") ||
+		strings.Contains(lower, "www.kaspi.kz") ||
+		strings.Contains(lower, "сумма заблокирована") ||
+		strings.Contains(lower, "ожидает подтверждения") {
+		return true
+	}
+
+	return false
 }
