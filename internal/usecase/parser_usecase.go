@@ -112,6 +112,11 @@ func extractTransactions(userID uuid.UUID, lines []string) ([]*domain.Transactio
 						tType = domain.Income
 					}
 
+					// Always store amount as positive — Type field determines direction
+					if amount < 0 {
+						amount = -amount
+					}
+
 					dateParsed, err := time.Parse("02.01.06", dateStr)
 					if err != nil {
 						dateParsed = time.Now()
