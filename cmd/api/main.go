@@ -48,18 +48,20 @@ func main() {
 	userRepo := postgres.NewUserRepo(database)
 
 	transactionRepo := postgres.NewTransactionRepo(database)
-	
+
 	statisticsRepo := postgres.NewStatisticsRepo(database)
 
 	// Initialize usecases
 	authUsecase := usecase.NewAuthUsecase(userRepo, jwtSvc)
-	
+
 	userUsecase := usecase.NewUserUseCase(userRepo)
-	
+
 	statisticsUsecase := usecase.NewStatisticsUsecase(statisticsRepo, transactionRepo, userRepo)
-	
+
 	transactionUsecase := usecase.NewTransactionUsecase(transactionRepo, userRepo)
-	
+
+	parserUsecase := usecase.NewParserUseCase(transactionRepo, userRepo)
+
 	// Initialize handlers
 	authHandler := &handler.AuthHandler{
 		AuthUsecase: authUsecase,
@@ -70,15 +72,16 @@ func main() {
 	transactionHandler := &handler.TransactionHandler{
 		TransactionUsecase: transactionUsecase,
 	}
-    
-    statisticsHandler := &handler.StatisticsHandler{
+	parserHandler := &handler.ParserHandler{
+		ParserUseCase: parserUsecase,
+	}
+
+	statisticsHandler := &handler.StatisticsHandler{
 		StatisticsUsecase: statisticsUsecase,
 	}
 
-
 	// Setup router
-	router := server.SetupRouter(authHandler, userHandler, transactionHandler, statisticsHandler, jwtSvc)
-
+	router := server.SetupRouter(authHandler, userHandler, transactionHandler, statisticsHandler, parserHandler, jwtSvc)
 
 	// Start server
 	port := os.Getenv("SERVER_PORT")

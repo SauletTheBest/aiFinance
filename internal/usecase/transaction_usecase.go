@@ -22,6 +22,7 @@ func NewTransactionUsecase(transactionRepo repository.TransactionRepository, use
 	}
 }
 
+
 // CreateTransaction - Create a new transaction for a user
 func (uc *TransactionUsecase) CreateTransaction(ctx context.Context, userID uuid.UUID, amount float64, description string, category string, transactionType string, createdAt time.Time) (*domain.Transaction, error) {
 	// Validate user exists
