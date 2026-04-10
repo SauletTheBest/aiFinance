@@ -72,7 +72,7 @@ func mapToDomain(userID uuid.UUID, raw kaspi.RawTransaction) *domain.Transaction
 		Description: raw.Description,
 		Category:    raw.Category,
 		Type:        tType,
-		Status:      domain.StatusCategorized,
+		Status:      domain.StatusPending,
 		CreatedAt:   raw.Date,
 	}
 }
