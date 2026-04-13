@@ -13,6 +13,8 @@ type Config struct {
 	DBName string
 	JWTSecret string
 	ServerPort int
+	OpenRouterAPIKey string
+	OpenRouterModel  string
 }
 
 func Load() *Config {
@@ -20,13 +22,15 @@ func Load() *Config {
 	serverPort, _ := strconv.Atoi(getEnv("SERVER_PORT", "8080"))
 
 	return &Config{
-		DBHost:     getEnv("DB_HOST", "localhost"),
-		DBPort:     dbPort,
-		DBUser:     getEnv("DB_USER", "postgres"),
-		DBPassword: getEnv("DB_PASSWORD", ""),
-		DBName:     getEnv("DB_NAME", "financial_app"),
-		JWTSecret:  getEnv("JWT_SECRET", "default_secret"),
-		ServerPort: serverPort,
+		DBHost:           getEnv("DB_HOST", "localhost"),
+		DBPort:           dbPort,
+		DBUser:           getEnv("DB_USER", "postgres"),
+		DBPassword:       getEnv("DB_PASSWORD", ""),
+		DBName:           getEnv("DB_NAME", "financial_app"),
+		JWTSecret:        getEnv("JWT_SECRET", "default_secret"),
+		ServerPort:       serverPort,
+		OpenRouterAPIKey: getEnv("OPENROUTER_API_KEY", ""),
+		OpenRouterModel:  getEnv("OPENROUTER_MODEL", "nvidia/nemotron-3-super-120b-a12b:free"),
 	}
 }
 

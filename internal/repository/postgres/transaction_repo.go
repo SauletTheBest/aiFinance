@@ -97,4 +97,21 @@ func (r *TransactionRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&Transaction{}).Error
 }
 
+// GetByStatus returns transactions filtered by status, limited to `limit` rows.
+// Used by the background worker to grab PENDING transactions for AI categorization.
+func (r *TransactionRepo) GetByStatus(ctx context.Context, status domain.TransactionStatus, limit int) ([]*domain.Transaction, error) {
+	var models []Transaction
+	err := r.db.WithContext(ctx).
+		Where("status = ?", status).
+		Limit(limit).
+		Find(&models).Error
+	if err != nil {
+		return nil, err
+	}
 
+	transactions := make([]*domain.Transaction, len(models))
+	for i, model := range models {
+		transactions[i] = transactionToDomain(&model)
+	}
+	return transactions, nil
+}

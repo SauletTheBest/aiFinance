@@ -1,18 +1,21 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
 
 	"github.com/joho/godotenv"
 
+	"github.com/SauletTheBest/BackendFinancialApplication/internal/ai"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/config"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/db"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/handler"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/repository/postgres"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/server"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/usecase"
+	"github.com/SauletTheBest/BackendFinancialApplication/internal/worker"
 	"github.com/SauletTheBest/BackendFinancialApplication/pkg/jwt"
 )
 
@@ -82,6 +85,11 @@ func main() {
 
 	// Setup router
 	router := server.SetupRouter(authHandler, userHandler, transactionHandler, statisticsHandler, parserHandler, jwtSvc)
+
+	// Initialize AI client and background categorization worker
+	aiClient := ai.NewOpenRouterClient(cfg.OpenRouterAPIKey, cfg.OpenRouterModel)
+	categorizer := worker.NewCategorizationWorker(transactionRepo, aiClient)
+	go categorizer.Start(context.Background())
 
 	// Start server
 	port := os.Getenv("SERVER_PORT")
