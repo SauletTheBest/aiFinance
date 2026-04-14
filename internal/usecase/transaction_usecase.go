@@ -35,14 +35,19 @@ func (uc *TransactionUsecase) CreateTransaction(ctx context.Context, userID uuid
 		createdAt = time.Now()
 	}
 
+	status := domain.StatusPending
+	if category != "" {
+		status = domain.StatusCategorized
+	}
+
 	transaction := &domain.Transaction{
 		ID:          uuid.New(),
 		UserID:      userID,
 		Amount:      amount,
 		Description: description,
-		Category:    category,  // " " Will be set by AI service but i maked manually maybe will change to ""
+		Category:    category,
 		Type:  		 domain.TransactionType(transactionType),
-		Status:      domain.StatusPending,
+		Status:      status,
 		CreatedAt:   createdAt,
 	}
 
@@ -74,6 +79,10 @@ func (uc *TransactionUsecase) UpdateTransaction(ctx context.Context, id uuid.UUI
 	transaction.Amount = amount
 	transaction.Description = description
 	transaction.Category = category
+
+	if category != "" {
+		transaction.Status = domain.StatusCategorized
+	}
 
 	if !createdAt.IsZero() {
         transaction.CreatedAt = createdAt

@@ -16,7 +16,7 @@ const (
 	// How often the worker checks for PENDING transactions
 	pollInterval = 10 * time.Second
 	// How many transactions to grab per batch (kept small for free-tier rate limits)
-	batchSize = 5
+	batchSize = 50
 	// Cooldown after a rate-limit (429) or API error before retrying
 	errorCooldown = 60 * time.Second
 )
