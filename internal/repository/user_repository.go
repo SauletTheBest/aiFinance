@@ -13,4 +13,5 @@ type UserRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error)
 	Update(ctx context.Context, user *domain.User) error
 	UpdateProfile(ctx context.Context, userID uuid.UUID, name, currency string) error
+	UpdateBaseBalance(ctx context.Context, userID uuid.UUID, baseBalance float64) error
 }

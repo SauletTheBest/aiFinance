@@ -43,6 +43,7 @@ func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHand
 
 	
 		protected.GET("/statistics/balance", statisticsHandler.GetBalance)
+		protected.PUT("/statistics/balance", statisticsHandler.UpdateBalance)
 		protected.GET("/statistics", statisticsHandler.GetStatistics)
 	}
 

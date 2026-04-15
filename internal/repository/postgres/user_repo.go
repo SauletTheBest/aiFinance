@@ -15,10 +15,11 @@ type UserRepo struct {
 }
 type User struct {
 	ID           uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Name 		 string
+	Name         string
 	Email        string    `gorm:"uniqueIndex"`
 	PasswordHash string
 	Currency     string    `gorm:"type:varchar(3);not null;default:'KZT'"`
+	BaseBalance  float64   `gorm:"not null;default:0"`
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }
@@ -26,10 +27,11 @@ type User struct {
 func usertoDomain(model *User) *domain.User {
 	return &domain.User{
 		ID:           model.ID,
-		Name: 		  model.Name,
+		Name:         model.Name,
 		Email:        model.Email,
 		PasswordHash: model.PasswordHash,
 		Currency:     model.Currency,
+		BaseBalance:  model.BaseBalance,
 		CreatedAt:    model.CreatedAt,
 		UpdatedAt:    model.UpdatedAt,
 	}
@@ -38,10 +40,11 @@ func usertoDomain(model *User) *domain.User {
 func toModel(user *domain.User) *User {
 	return &User{
 		ID:           user.ID,
-		Name: 		  user.Name,
+		Name:         user.Name,
 		Email:        user.Email,
 		PasswordHash: user.PasswordHash,
 		Currency:     user.Currency,
+		BaseBalance:  user.BaseBalance,
 		CreatedAt:    user.CreatedAt,
 		UpdatedAt:    user.UpdatedAt,
 	}
@@ -98,6 +101,17 @@ func (r *UserRepo) UpdateProfile(ctx context.Context, userID uuid.UUID, name, cu
 		user.Currency = currency
 	}
 	user.UpdatedAt = time.Now()
-	
+
 	return r.Update(ctx, user)
+}
+
+// UpdateBaseBalance sets the user's opening balance offset directly in the database.
+func (r *UserRepo) UpdateBaseBalance(ctx context.Context, userID uuid.UUID, baseBalance float64) error {
+	return r.db.WithContext(ctx).
+		Model(&User{}).
+		Where("id = ?", userID).
+		Updates(map[string]interface{}{
+			"base_balance": baseBalance,
+			"updated_at":   time.Now(),
+		}).Error
 }

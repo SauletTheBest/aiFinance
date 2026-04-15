@@ -114,3 +114,26 @@ func (h *StatisticsHandler) GetStatistics(c *gin.Context) {
 
 	c.JSON(http.StatusOK, resp)
 }
+
+// UpdateBalance handles PUT /api/statistics/balance.
+// The client sends the user's real total balance; we compute and persist the required opening offset.
+func (h *StatisticsHandler) UpdateBalance(c *gin.Context) {
+	userID, err := getUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	var req dto.UpdateBalanceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	if err := h.StatisticsUsecase.UpdateBalance(c.Request.Context(), userID, *req.Total); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "balance updated successfully"})
+}
