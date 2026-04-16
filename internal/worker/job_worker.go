@@ -16,9 +16,13 @@ const (
 	// How often the worker checks for PENDING transactions
 	pollInterval = 10 * time.Second
 	// How many transactions to grab per batch (kept small for free-tier rate limits)
-	batchSize = 50
+	batchSize = 100
 	// Cooldown after a rate-limit (429) or API error before retrying
 	errorCooldown = 60 * time.Second
+	// How many times to retry a single transaction if AI misses it
+	maxRetries = 3
+	// Delay between retries for a single transaction
+	retryDelay = 2 * time.Second
 )
 
 // CategorizationWorker is a background goroutine that polls for
@@ -125,13 +129,19 @@ func (w *CategorizationWorker) processBatch(ctx context.Context, ticker *time.Ti
 	for _, tx := range transactions {
 		category, ok := resultMap[tx.ID]
 		if !ok {
-			// AI didn't return a result for this transaction
-			tx.Status = domain.StatusFailed
-			log.Printf("[Worker] AI did not return category for tx %s", tx.ID)
-		} else {
+			// AI missed this transaction — retry individually up to maxRetries times
+			log.Printf("[Worker] AI did not return category for tx %s — retrying (max %d attempts)", tx.ID, maxRetries)
+			category, ok = w.categorizeWithRetry(ctx, tx.ID, tx.Description)
+		}
+
+		if ok {
 			tx.Category = category
 			tx.Status = domain.StatusCategorized
 			categorized++
+		} else {
+			// All retries exhausted — mark as permanently failed
+			tx.Status = domain.StatusFailed
+			log.Printf("[Worker] All %d retries exhausted for tx %s — marked as FAILED", maxRetries, tx.ID)
 		}
 
 		if err := w.transactionRepo.Update(ctx, tx); err != nil {
@@ -150,6 +160,31 @@ func (w *CategorizationWorker) markAllStatus(ctx context.Context, transactions [
 			log.Printf("[Worker] Failed to mark tx %s as %s: %v", tx.ID, status, err)
 		}
 	}
+}
+
+// categorizeWithRetry retries categorizing a single transaction up to maxRetries times.
+// Returns the category and true on success, empty string and false if all attempts fail.
+func (w *CategorizationWorker) categorizeWithRetry(ctx context.Context, id uuid.UUID, description string) (string, bool) {
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		log.Printf("[Worker] Retry %d/%d for tx %s", attempt, maxRetries, id)
+
+		time.Sleep(retryDelay)
+
+		results, err := w.aiClient.CategorizeTransactions(ctx, map[uuid.UUID]string{id: description})
+		if err != nil {
+			log.Printf("[Worker] Retry %d/%d failed for tx %s: %v", attempt, maxRetries, id, err)
+			continue
+		}
+
+		for _, r := range results {
+			if r.TransactionID == id && r.Category != "" {
+				log.Printf("[Worker] Retry %d/%d succeeded for tx %s → %s", attempt, maxRetries, id, r.Category)
+				return r.Category, true
+			}
+		}
+	}
+
+	return "", false
 }
 
 // isRateLimited checks if the error message indicates a 429 rate limit.
