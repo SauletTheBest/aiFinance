@@ -3,6 +3,7 @@ package ai
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +12,9 @@ import (
 
 	"github.com/google/uuid"
 )
+
+//go:embed prompts/categorization.txt
+var categorizationPrompt string
 
 // CategoryResult holds the AI's categorization decision for a single transaction.
 type CategoryResult struct {
@@ -81,7 +85,7 @@ func (c *OpenRouterClient) CategorizeTransactions(ctx context.Context, items map
 		Messages: []chatMessage{
 			{
 				Role:    "system",
-				Content: "Вы — помощник по категоризации финансовых транзакций. Вы получите объект JSON, где ключи — это ID транзакций, а значения — описания платежей. Классифицируйте каждую транзакцию в одну из следующих категорий: Продукты, Транспорт, Развлечения, Одежда, Рестораны и Кафе, Здоровье, Образование, Коммунальные услуги, Подписки, Переводы, Зарплата, Прочее. Отвечайте ТОЛЬКО в формате JSON, где ключ — ID транзакции, а значение — название категории. Без пояснений, без markdown, только чистый JSON.",
+				Content: categorizationPrompt,
 			},
 			{
 				Role:    "user",
