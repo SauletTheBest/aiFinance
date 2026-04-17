@@ -20,6 +20,8 @@ A financial application backend built using Go, adhering to Clean Architecture p
    DB_NAME=finance_app
    JWT_SECRET=supersecret
    SERVER_PORT=8080
+   OPENROUTER_API_KEY=youropenrouterapi
+   OPENROUTER_MODEL=openai/gpt-oss-120b:free 
    ```
 2. **Database Required**: A running PostgreSQL instance.
 3. **Execute**:
