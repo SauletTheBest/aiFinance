@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/joho/godotenv"
 
@@ -89,16 +91,34 @@ func main() {
 	// Initialize AI client and background categorization worker
 	aiClient := ai.NewOpenRouterClient(cfg.OpenRouterAPIKey, cfg.OpenRouterModel)
 	categorizer := worker.NewCategorizationWorker(transactionRepo, aiClient)
-	go categorizer.Start(context.Background())
 
-	// Start server
+	// Startup recovery: reset any PROCESSING transactions left over from a previous crash
+	categorizer.RecoverStuck(context.Background())
+
+	// Create a cancellable context for the worker
+	workerCtx, cancelWorker := context.WithCancel(context.Background())
+	go categorizer.Start(workerCtx)
+
+	// Graceful shutdown: catch Ctrl+C and SIGTERM
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+
+	// Start HTTP server in a goroutine so it doesn't block the signal listener
 	port := os.Getenv("SERVER_PORT")
 	if port == "" {
 		port = "8080"
 	}
-
 	log.Printf("Server starting on port https://localhost:%s", port)
-	if err := router.Run(":" + port); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
-	}
+
+	go func() {
+		if err := router.Run(":" + port); err != nil {
+			log.Fatalf("Failed to start server: %v", err)
+		}
+	}()
+
+	// Block until shutdown signal
+	<-quit
+	log.Println("[Main] Shutdown signal received — stopping worker...")
+	cancelWorker()
+	log.Println("[Main] Server stopped.")
 }

@@ -30,7 +30,6 @@ type OpenRouterClient struct {
 }
 
 // NewOpenRouterClient creates a new AI client.
-// model example: "google/gemini-2.0-flash-001" (cheap/free on OpenRouter)
 func NewOpenRouterClient(apiKey string, model string) *OpenRouterClient {
 	return &OpenRouterClient{
 		apiKey: apiKey,

@@ -16,7 +16,7 @@ const (
 	// How often the worker checks for PENDING transactions
 	pollInterval = 10 * time.Second
 	// How many transactions to grab per batch (kept small for free-tier rate limits)
-	batchSize = 100
+	batchSize = 50
 	// Cooldown after a rate-limit (429) or API error before retrying
 	errorCooldown = 60 * time.Second
 	// How many times to retry a single transaction if AI misses it
@@ -59,7 +59,11 @@ func (w *CategorizationWorker) Start(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("[Worker] Categorization worker stopped")
+			// Graceful shutdown: revert any in-progress batch back to PENDING
+			// Use a fresh context because the original one is already cancelled
+			log.Println("[Worker] Shutdown received — reverting in-progress transactions to PENDING...")
+			w.RecoverStuck(context.Background())
+			log.Println("[Worker] Worker stopped cleanly")
 			return
 		case <-ticker.C:
 			w.processBatch(ctx, ticker)
@@ -160,6 +164,22 @@ func (w *CategorizationWorker) markAllStatus(ctx context.Context, transactions [
 			log.Printf("[Worker] Failed to mark tx %s as %s: %v", tx.ID, status, err)
 		}
 	}
+}
+
+// RecoverStuck finds any transactions left in PROCESSING status (from a previous crashed run)
+// and resets them to PENDING so they can be picked up on the next tick.
+// Call this once at startup, and also on graceful shutdown.
+func (w *CategorizationWorker) RecoverStuck(ctx context.Context) {
+	stuck, err := w.transactionRepo.GetByStatus(ctx, domain.StatusProcessing, 1000)
+	if err != nil {
+		log.Printf("[Worker] RecoverStuck: failed to query stuck transactions: %v", err)
+		return
+	}
+	if len(stuck) == 0 {
+		return
+	}
+	log.Printf("[Worker] RecoverStuck: found %d stuck PROCESSING transactions — resetting to PENDING", len(stuck))
+	w.markAllStatus(ctx, stuck, domain.StatusPending)
 }
 
 // categorizeWithRetry retries categorizing a single transaction up to maxRetries times.
