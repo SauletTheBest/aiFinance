@@ -119,3 +119,30 @@ _All actions below require the HTTP Header to be passed: `Authorization: Bearer 
       "period_end": "2023-12-31T23:59:59Z"
     }
     ```
+
+#### Goals Tracking
+- **POST** `/goals` — Create a new financial goal.
+  ```json
+  {
+    "title": "New Laptop",
+    "target_amount": 1500.00,
+    "deadline": "2024-12-31T00:00:00Z"
+  }
+  ```
+- **GET** `/goals` — Fetch all goals for the logged-in user.
+- **GET** `/goals/:id` — Retrieve details for a single specific goal.
+- **PUT** `/goals/:id/contribute` — Add progress (money) to a specific goal.
+  ```json
+  {
+    "amount": 50.00
+  }
+  ```
+- **DELETE** `/goals/:id` — Permanently delete a goal.
+
+#### Balance Management
+- **PUT** `/statistics/balance` — Update the user's base opening balance.
+  ```json
+  {
+    "base_balance": 5000.00
+  }
+  ```

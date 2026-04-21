@@ -23,7 +23,6 @@ import (
 
 func main() {
 
-	//поидее тут херня но потом надо это перенести ото че то не чисто да
 	// Load .env file
 	if err := godotenv.Load("../../.env"); err != nil {
 		log.Println("No .env file found")
@@ -51,21 +50,17 @@ func main() {
 
 	// Initialize repositories
 	userRepo := postgres.NewUserRepo(database)
-
 	transactionRepo := postgres.NewTransactionRepo(database)
-
 	statisticsRepo := postgres.NewStatisticsRepo(database)
+	goalRepo := postgres.NewGoalRepo(database)
 
 	// Initialize usecases
 	authUsecase := usecase.NewAuthUsecase(userRepo, jwtSvc)
-
 	userUsecase := usecase.NewUserUseCase(userRepo)
-
 	statisticsUsecase := usecase.NewStatisticsUsecase(statisticsRepo, transactionRepo, userRepo)
-
 	transactionUsecase := usecase.NewTransactionUsecase(transactionRepo, userRepo)
-
 	parserUsecase := usecase.NewParserUseCase(transactionRepo, userRepo)
+	goalUsecase := usecase.NewGoalUseCase(goalRepo)
 
 	// Initialize handlers
 	authHandler := &handler.AuthHandler{
@@ -80,13 +75,14 @@ func main() {
 	parserHandler := &handler.ParserHandler{
 		ParserUseCase: parserUsecase,
 	}
-
 	statisticsHandler := &handler.StatisticsHandler{
 		StatisticsUsecase: statisticsUsecase,
 	}
-
+	goalHandler := &handler.GoalHandler{
+		GoalUseCase: goalUsecase,
+	}
 	// Setup router
-	router := server.SetupRouter(authHandler, userHandler, transactionHandler, statisticsHandler, parserHandler, jwtSvc)
+	router := server.SetupRouter(authHandler, userHandler, transactionHandler, statisticsHandler, parserHandler, goalHandler, jwtSvc)
 
 	// Initialize AI client and background categorization worker
 	aiClient := ai.NewOpenRouterClient(cfg.OpenRouterAPIKey, cfg.OpenRouterModel)

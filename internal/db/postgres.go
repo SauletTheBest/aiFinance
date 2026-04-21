@@ -28,7 +28,7 @@ func RunMigrations(db *gorm.DB) error {
 
     log.Printf("Looking for migrations in: %s", migrationsDir)
 
-	wd, _ := os.Getwd()
+	wd, _ := os.Getwd()     //to check your current dir
 	log.Println("WORKDIR:", wd)
 
 	log.Println("Checking migrations dir exists:", migrationsDir)
