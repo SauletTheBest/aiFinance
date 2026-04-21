@@ -143,6 +143,6 @@ _All actions below require the HTTP Header to be passed: `Authorization: Bearer 
 - **PUT** `/statistics/balance` — Update the user's base opening balance.
   ```json
   {
-    "base_balance": 5000.00
+    "total": 5000.00
   }
   ```
