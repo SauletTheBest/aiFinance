@@ -8,6 +8,7 @@ import (
 // What the frontend sends us to create a goal
 type CreateGoalRequest struct {
 	Title        string     `json:"title" binding:"required"`
+	Description  *string    `json:"description"`
 	TargetAmount float64    `json:"target_amount" binding:"required,gt=0"`
 	Deadline     *time.Time `json:"deadline"`
 }
@@ -21,6 +22,7 @@ type AddProgressRequest struct {
 type GoalResponse struct {
 	ID            uuid.UUID  `json:"id"`
 	Title         string     `json:"title"`
+	Description   *string    `json:"description,omitempty"`
 	TargetAmount  float64    `json:"target_amount"`
 	CurrentAmount float64    `json:"current_amount"`
 	Deadline      *time.Time `json:"deadline"`

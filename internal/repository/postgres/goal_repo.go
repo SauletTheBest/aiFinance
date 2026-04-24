@@ -18,6 +18,7 @@ type Goal struct {
 	ID            uuid.UUID `gorm:"type:uuid;primaryKey"`
 	UserID        uuid.UUID `gorm:"type:uuid;not null"`
 	Title         string
+	Description   *string
 	TargetAmount  float64
 	CurrentAmount float64   `gorm:"default:0"`
 	Deadline      *time.Time
@@ -37,6 +38,7 @@ func goalToDomain(model *Goal) *domain.Goal {
 		UserID:        model.UserID,
 		Title:         model.Title,
 		TargetAmount:  model.TargetAmount,
+		Description:   model.Description,
 		CurrentAmount: model.CurrentAmount,
 		Deadline:      model.Deadline,
 		Status:        domain.GoalStatus(model.Status),
@@ -50,6 +52,7 @@ func goalToModel(domainGoal *domain.Goal) *Goal {
 		ID:            domainGoal.ID,
 		UserID:        domainGoal.UserID,
 		Title:         domainGoal.Title,
+		Description:   domainGoal.Description,
 		TargetAmount:  domainGoal.TargetAmount,
 		CurrentAmount: domainGoal.CurrentAmount,
 		Deadline:      domainGoal.Deadline,

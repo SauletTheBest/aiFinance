@@ -1,10 +1,10 @@
 package usecase
 
-
 import (
 	"context"
 	"errors"
 	"time"
+
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/domain"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/repository"
 	"github.com/google/uuid"
@@ -12,7 +12,7 @@ import (
 
 
 type GoalUseCase interface {
-	CreateGoal(ctx context.Context, userID uuid.UUID, title string, targetAmount float64, deadline *time.Time) (*domain.Goal, error)
+	CreateGoal(ctx context.Context, userID uuid.UUID, title string, description *string, targetAmount float64, deadline *time.Time) (*domain.Goal, error)
 	GetGoalsByUserID(ctx context.Context, userID uuid.UUID)([]*domain.Goal, error)
 	GetGoalByID(ctx context.Context, goalID uuid.UUID, userID uuid.UUID) (*domain.Goal, error)
 	AddProgress(ctx context.Context, goalID uuid.UUID, userID uuid.UUID, amountToAdd float64) (*domain.Goal, error)
@@ -30,7 +30,7 @@ func NewGoalUseCase(goalRepo repository.GoalRepository) GoalUseCase {
 	}
 }
 
-func (u *goalUseCase) CreateGoal(ctx context.Context, userID uuid.UUID, title string, targetAmount float64, deadline *time.Time) (*domain.Goal, error) {
+func (u *goalUseCase) CreateGoal(ctx context.Context, userID uuid.UUID, title string, description *string, targetAmount float64, deadline *time.Time) (*domain.Goal, error) {
     // 💡 Business Rule 1: You can't have a goal to save $0!
 	if targetAmount <= 0 {
 		return nil, errors.New("target amount must be greater than zero")
@@ -40,6 +40,7 @@ func (u *goalUseCase) CreateGoal(ctx context.Context, userID uuid.UUID, title st
 		ID:            uuid.New(), // Generate a new barcode
 		UserID:        userID,
 		Title:         title,
+		Description:   description,
 		TargetAmount:  targetAmount,
 		CurrentAmount: 0.0, // 💡 Business Rule 2: A new goal ALWAYS starts at zero!
 		Deadline:      deadline,
@@ -55,18 +56,29 @@ func (u *goalUseCase) CreateGoal(ctx context.Context, userID uuid.UUID, title st
 }
 
 func (u *goalUseCase) GetGoalsByUserID(ctx context.Context, userID uuid.UUID) ([]*domain.Goal, error) {
-	return u.goalRepo.GetByUserID(ctx, userID)
+	
+	goals, err := u.goalRepo.GetByUserID(ctx, userID)
+    
+	if err != nil {
+        return nil, err
+    }
+    for _, goal := range goals {
+        checkExpiry(goal)
+    }
+	
+	return goals, nil
 }
 func (u *goalUseCase) GetGoalByID(ctx context.Context, goalID uuid.UUID, userID uuid.UUID) (*domain.Goal, error){
-	
 	goal, err := u.goalRepo.GetByID(ctx, goalID)
 	if err != nil {
 		return nil, err
 	}
-	//Security Rule!
 	if goal.UserID != userID {
 		return nil, errors.New("unauthorized: you do not own this goal")
 	}
+
+	checkExpiry(goal) // check deadline
+
 	return goal, nil
 }
 
@@ -116,4 +128,12 @@ func (u *goalUseCase) DeleteGoal(ctx context.Context, goalID uuid.UUID, userID u
 	return u.goalRepo.Delete(ctx, goalID)
 }
 
-
+// checkExpiry automatically marks a goal as EXPIRED if the deadline passed
+// and it was never completed. This is called every time we READ a goal.
+func checkExpiry(goal *domain.Goal) {
+    if goal.Status == domain.GoalStatusActive &&
+        goal.Deadline != nil &&
+        time.Now().After(*goal.Deadline) {
+        goal.Status = domain.GoalStatusExpired
+    }
+}

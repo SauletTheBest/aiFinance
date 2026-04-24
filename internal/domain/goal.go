@@ -11,13 +11,14 @@ type GoalStatus string
 const (
 	GoalStatusActive    GoalStatus = "ACTIVE"
 	GoalStatusCompleted GoalStatus = "COMPLETED"
-	GoalStatusCancelled GoalStatus = "CANCELLED"
+	GoalStatusExpired GoalStatus = "EXPIRED"
 )
 
 type Goal struct {
 	ID            uuid.UUID
 	UserID        uuid.UUID
 	Title         string
+	Description   *string
 	TargetAmount  float64
 	CurrentAmount float64
 	Deadline      *time.Time

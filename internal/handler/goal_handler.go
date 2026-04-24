@@ -35,7 +35,7 @@ func (h *GoalHandler) CreateGoal(c *gin.Context) {
 	}
 
 	// 3. Send data to UseCase
-	goal, err := h.GoalUseCase.CreateGoal(c.Request.Context(), userID, req.Title, req.TargetAmount, req.Deadline)
+	goal, err := h.GoalUseCase.CreateGoal(c.Request.Context(), userID, req.Title, req.Description, req.TargetAmount, req.Deadline)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -45,6 +45,7 @@ func (h *GoalHandler) CreateGoal(c *gin.Context) {
 	response := dto.GoalResponse{
 		ID:            goal.ID,
 		Title:         goal.Title,
+		Description:   goal.Description,
 		TargetAmount:  goal.TargetAmount,
 		CurrentAmount: goal.CurrentAmount,
 		Deadline:      goal.Deadline,
@@ -98,6 +99,7 @@ func (h *GoalHandler) GetGoals(c *gin.Context) {
 		responses = append(responses, dto.GoalResponse{
 			ID:            goal.ID,
 			Title:         goal.Title,
+			Description:   goal.Description,
 			TargetAmount:  goal.TargetAmount,
 			CurrentAmount: goal.CurrentAmount,
 			Deadline:      goal.Deadline,
@@ -131,6 +133,7 @@ func (h *GoalHandler) GetGoal(c *gin.Context) {
 	response := dto.GoalResponse{
 		ID:            goal.ID,
 		Title:         goal.Title,
+		Description:   goal.Description,
 		TargetAmount:  goal.TargetAmount,
 		CurrentAmount: goal.CurrentAmount,
 		Deadline:      goal.Deadline,
