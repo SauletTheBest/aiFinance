@@ -127,7 +127,8 @@ _All actions below require the HTTP Header to be passed: `Authorization: Bearer 
   ```json
   {
     "title": "New Laptop",
-    "target_amount": 1500.00,
+    "target_amount": 500000.00,
+    "description": "For watch films"
     "deadline": "2024-12-31T00:00:00Z"
   }
   ```
