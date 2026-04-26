@@ -107,8 +107,12 @@ func (h *GoalHandler) GetGoals(c *gin.Context) {
 			CreatedAt:     goal.CreatedAt,
 		})
 	}
+	response := dto.GoalListResponse{
+		Goals: responses,
+		Total: len(responses),
+	}
 
-	c.JSON(http.StatusOK, responses)
+	c.JSON(http.StatusOK, response)
 }
 
 // GET /api/goals/:id
@@ -162,4 +166,41 @@ func (h *GoalHandler) DeleteGoal(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Goal deleted successfully"})
+}
+
+// PATCH /api/goals/:id
+func (h *GoalHandler) UpdateGoal(c *gin.Context) {
+	userIDStr, _ := c.Get("user_id")
+	userID, _ := uuid.Parse(userIDStr.(string))
+
+	goalID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid goal ID"})
+		return
+	}
+
+	var req dto.UpdateGoalRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	goal, err := h.GoalUseCase.UpdateGoal(c.Request.Context(), goalID, userID, req.Title, req.Description, req.TargetAmount, req.Deadline)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	response := dto.GoalResponse{
+		ID:            goal.ID,
+		Title:         goal.Title,
+		Description:   goal.Description,
+		TargetAmount:  goal.TargetAmount,
+		CurrentAmount: goal.CurrentAmount,
+		Deadline:      goal.Deadline,
+		Status:        string(goal.Status),
+		CreatedAt:     goal.CreatedAt,
+	}
+
+	c.JSON(http.StatusOK, response)
 }

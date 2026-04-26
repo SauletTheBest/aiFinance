@@ -16,6 +16,7 @@ type GoalUseCase interface {
 	GetGoalsByUserID(ctx context.Context, userID uuid.UUID)([]*domain.Goal, error)
 	GetGoalByID(ctx context.Context, goalID uuid.UUID, userID uuid.UUID) (*domain.Goal, error)
 	AddProgress(ctx context.Context, goalID uuid.UUID, userID uuid.UUID, amountToAdd float64) (*domain.Goal, error)
+	UpdateGoal(ctx context.Context, goalID uuid.UUID, userID uuid.UUID, title *string, description *string, targetAmount *float64, deadline *time.Time) (*domain.Goal, error)
 	DeleteGoal(ctx context.Context, goalID uuid.UUID, userID uuid.UUID) error
 }
 
@@ -105,6 +106,44 @@ func (u *goalUseCase) AddProgress(ctx context.Context, goalID uuid.UUID, userID 
 		goal.Status = domain.GoalStatusCompleted
 	}
 	// Step 3: Save the updated goal back to the database
+	err = u.goalRepo.Update(ctx, goal)
+	if err != nil {
+		return nil, err
+	}
+	return goal, nil
+}
+
+func (u *goalUseCase) UpdateGoal(ctx context.Context, goalID uuid.UUID, userID uuid.UUID, title *string, description *string, targetAmount *float64, deadline *time.Time) (*domain.Goal, error) {
+	// 1. Fetch the goal
+	goal, err := u.goalRepo.GetByID(ctx, goalID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. Security Check!
+	if goal.UserID != userID {
+		return nil, errors.New("unauthorized: you do not own this goal")
+	}
+
+	// 3. Only update the fields that the user actually sent
+	if title != nil {
+		goal.Title = *title
+	}
+	if description != nil {
+		goal.Description = description
+	}
+	if targetAmount != nil {
+		if *targetAmount <= 0 {
+			return nil, errors.New("target amount must be greater than zero")
+		}
+		goal.TargetAmount = *targetAmount
+	}
+	if deadline != nil {
+		goal.Deadline = deadline
+	}
+	goal.UpdatedAt = time.Now()
+
+	// 4. Save
 	err = u.goalRepo.Update(ctx, goal)
 	if err != nil {
 		return nil, err

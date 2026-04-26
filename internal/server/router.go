@@ -50,6 +50,7 @@ func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHand
 		protected.GET("/goals", goalHandler.GetGoals)
 		protected.PUT("/goals/:id/contribute", goalHandler.AddProgress)
 		protected.GET("/goals/:id", goalHandler.GetGoal)
+		protected.PATCH("/goals/:id", goalHandler.UpdateGoal)
 		protected.DELETE("/goals/:id", goalHandler.DeleteGoal)
 
 	}
