@@ -54,6 +54,6 @@ func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHand
 		protected.DELETE("/goals/:id", goalHandler.DeleteGoal)
 
 	}
-
+	
 	return router
 }
