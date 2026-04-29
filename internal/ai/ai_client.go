@@ -9,12 +9,15 @@ import (
 	"io"
 	"net/http"
 	"time"
-
+	"strings"
 	"github.com/google/uuid"
 )
 
 //go:embed prompts/categorization.txt
 var categorizationPrompt string
+
+//go:embed prompts/advisor.txt
+var advisorPrompt string 
 
 // CategoryResult holds the AI's categorization decision for a single transaction.
 type CategoryResult struct {
@@ -38,6 +41,18 @@ func NewOpenRouterClient(apiKey string, model string) *OpenRouterClient {
 			Timeout: 60 * time.Second,
 		},
 	}
+}
+
+// helper function to clean ai response
+func cleanJSONResponse(raw string) string {
+	// Remove the ```json at the start
+	raw = strings.TrimPrefix(raw, "```json")
+	// Remove the ``` at the start (in case the AI didn't include "json")
+	raw = strings.TrimPrefix(raw, "```")
+	// Remove the ``` at the end
+	raw = strings.TrimSuffix(raw, "```")
+	// Remove any extra whitespace
+	return strings.TrimSpace(raw)
 }
 
 // ---------- OpenRouter request / response structs ----------
@@ -133,12 +148,19 @@ func (c *OpenRouterClient) CategorizeTransactions(ctx context.Context, items map
 		return nil, fmt.Errorf("ai: no choices in response")
 	}
 
+
+	
 	// The AI content should be a pure JSON object: { "uuid": "category", ... }
 	rawContent := chatResp.Choices[0].Message.Content
+
+	cleanContent := cleanJSONResponse(rawContent)
+	
 	var categoryMap map[string]string
-	if err := json.Unmarshal([]byte(rawContent), &categoryMap); err != nil {
-		return nil, fmt.Errorf("ai: failed to parse AI output as JSON: %w\nRaw: %s", err, rawContent)
+
+	if err := json.Unmarshal([]byte(cleanContent), &categoryMap); err != nil {
+		return nil, fmt.Errorf("ai: failed to parse AI output as JSON: %w\nRaw: %s", err, cleanContent)
 	}
+
 
 	// Map back to CategoryResult
 	results := make([]CategoryResult, 0, len(categoryMap))
@@ -160,4 +182,62 @@ func (c *OpenRouterClient) CategorizeTransactions(ctx context.Context, items map
 func buildPrompt(items map[uuid.UUID]string) string {
 	data, _ := json.MarshalIndent(items, "", "  ")
 	return string(data)
+}
+
+
+// Chat sends a user message to OpenRouter with a pre-built financial context.
+// The advisorPrompt (from advisor.txt) is the static rules part.
+// The systemPrompt argument contains the live user data built at runtime.
+func (c *OpenRouterClient) Chat(ctx context.Context, systemPrompt string, userMessage string) (string, error) {
+    reqBody := chatRequest{
+        Model: c.model,
+        Messages: []chatMessage{
+            {Role: "system", Content: systemPrompt},  // rules + live user data
+            {Role: "user", Content: userMessage},     // what user actually typed
+        },
+    }
+
+    bodyBytes, err := json.Marshal(reqBody)
+    if err != nil {
+        return "", fmt.Errorf("ai: chat marshal error: %w", err)
+    }
+
+    req, err := http.NewRequestWithContext(ctx, http.MethodPost,
+        "https://openrouter.ai/api/v1/chat/completions",
+        bytes.NewReader(bodyBytes))
+    if err != nil {
+        return "", fmt.Errorf("ai: chat request build error: %w", err)
+    }
+
+    req.Header.Set("Content-Type", "application/json")
+    req.Header.Set("Authorization", "Bearer "+c.apiKey)
+
+    resp, err := c.httpClient.Do(req)
+    if err != nil {
+        return "", fmt.Errorf("ai: chat http error: %w", err)
+    }
+    defer resp.Body.Close()
+
+    respBytes, err := io.ReadAll(resp.Body)
+    if err != nil {
+        return "", fmt.Errorf("ai: chat read error: %w", err)
+    }
+    if resp.StatusCode != http.StatusOK {
+        return "", fmt.Errorf("ai: chat status %d: %s", resp.StatusCode, string(respBytes))
+    }
+
+    var chatResp chatResponse
+    if err := json.Unmarshal(respBytes, &chatResp); err != nil {
+        return "", fmt.Errorf("ai: chat parse error: %w", err)
+    }
+    if len(chatResp.Choices) == 0 {
+        return "", fmt.Errorf("ai: chat no choices returned")
+    }
+
+    return chatResp.Choices[0].Message.Content, nil
+}
+
+// GetAdvisorPrompt returns the static advisor rules loaded from advisor.txt
+func (c *OpenRouterClient) GetAdvisorPrompt() string {
+    return advisorPrompt
 }

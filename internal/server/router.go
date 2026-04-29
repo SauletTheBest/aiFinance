@@ -7,7 +7,7 @@ import (
 	"github.com/SauletTheBest/BackendFinancialApplication/pkg/jwt"
 )
 
-func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHandler, transactionHandler *handler.TransactionHandler, statisticsHandler *handler.StatisticsHandler, parserHandler *handler.ParserHandler, goalHandler *handler.GoalHandler, jwtSvc *jwt.Service) *gin.Engine {
+func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHandler, transactionHandler *handler.TransactionHandler, statisticsHandler *handler.StatisticsHandler, parserHandler *handler.ParserHandler, goalHandler *handler.GoalHandler, chatHandler *handler.ChatHandler, jwtSvc *jwt.Service) *gin.Engine {
 	router := gin.Default()
 
 	// Health check
@@ -53,6 +53,7 @@ func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHand
 		protected.PATCH("/goals/:id", goalHandler.UpdateGoal)
 		protected.DELETE("/goals/:id", goalHandler.DeleteGoal)
 
+		protected.POST("/ai/chat", chatHandler.Chat)
 	}
 	
 	return router

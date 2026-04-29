@@ -41,7 +41,9 @@ func NewApp(cfg *config.Config) *App {
 	if err := db.RunMigrations(database); err != nil {
 		log.Fatalf("Failed to run migrations: %v", err)
 	} 
-	
+
+	aiClient := ai.NewOpenRouterClient(cfg.OpenRouterAPIKey, cfg.OpenRouterModel)
+
 	jwtSvc := jwt.NewService(cfg.JWTSecret)
 
 	userRepo := postgres.NewUserRepo(database)
@@ -55,6 +57,8 @@ func NewApp(cfg *config.Config) *App {
 	transactionUsecase := usecase.NewTransactionUsecase(transactionRepo, userRepo)
 	parserUsecase := usecase.NewParserUseCase(transactionRepo, userRepo)
 	goalUsecase := usecase.NewGoalUseCase(goalRepo)
+	
+	chatUsecase := usecase.NewChatUseCase(userRepo, goalRepo, statisticsRepo, aiClient)
 
 	authHandler := &handler.AuthHandler{AuthUsecase: authUsecase}
 	userHandler := &handler.UserHandler{UserUsecase: userUsecase}
@@ -63,9 +67,10 @@ func NewApp(cfg *config.Config) *App {
 	statisticsHandler := &handler.StatisticsHandler{StatisticsUsecase: statisticsUsecase}
 	goalHandler := &handler.GoalHandler{GoalUseCase: goalUsecase}
 	
-	router := server.SetupRouter(authHandler, userHandler, transactionHandler, statisticsHandler, parserHandler, goalHandler, jwtSvc)
+	chatHandler := &handler.ChatHandler{ChatUseCase: chatUsecase}
 	
-	aiClient := ai.NewOpenRouterClient(cfg.OpenRouterAPIKey, cfg.OpenRouterModel)
+	router := server.SetupRouter(authHandler, userHandler, transactionHandler, statisticsHandler, parserHandler, goalHandler, chatHandler, jwtSvc)
+
 	categorizer := worker.NewCategorizationWorker(transactionRepo, aiClient)
 
 	port := os.Getenv("SERVER_PORT")
