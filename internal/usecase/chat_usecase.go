@@ -37,7 +37,7 @@ func NewChatUseCase(
 
 // Chat is the main method.
 // It fetches live user data → builds context → calls AI → returns reply.
-func (uc *ChatUseCase) Chat(ctx context.Context, userID uuid.UUID, userMessage string) (string, error) {
+func (uc *ChatUseCase) Chat(ctx context.Context, userID uuid.UUID, history []ai.ChatMessage, userMessage string) (string, error) {
     // 1. Get basic user info (name, currency)
     user, err := uc.userRepo.GetByID(ctx, userID)
     if err != nil {
@@ -50,15 +50,15 @@ func (uc *ChatUseCase) Chat(ctx context.Context, userID uuid.UUID, userMessage s
         return "", fmt.Errorf("chat: get balance failed: %w", err)
     }
 
-    // 3. Get last 30 days income & expenses
+    // 3. Get last 90 days income & expenses
     now := time.Now()
-    start := now.AddDate(0, -3, 0) // 30 days ago
+    start := now.AddDate(0, -3, 0) // 90 days ago
     income, expenses, err := uc.statisticsRepo.GetIncomeExpense(ctx, userID, &start, &now)
     if err != nil {
         return "", fmt.Errorf("chat: get income/expense failed: %w", err)
     }
 
-    // 4. Get top spending categories (last 30 days)
+    // 4. Get top spending categories (last 90 days)
     categories, err := uc.statisticsRepo.GetCategories(ctx, userID, &start, &now)
     if err != nil {
         return "", fmt.Errorf("chat: get categories failed: %w", err)
@@ -81,8 +81,14 @@ func (uc *ChatUseCase) Chat(ctx context.Context, userID uuid.UUID, userMessage s
         goals,
     )
 
-    // 7. Send to OpenRouter and return the reply
-    return uc.aiClient.Chat(ctx, systemPrompt, userMessage)
+    // 7. Add the current message to the history
+    fullHistory := append(history, ai.ChatMessage{
+        Role:    "user",
+        Content: userMessage,
+    })
+
+    // 8. Send to OpenRouter and return the reply
+    return uc.aiClient.Chat(ctx, systemPrompt, fullHistory)
 }
 
 // buildFinancialContext glues together static advisor rules + live DB data
@@ -110,7 +116,7 @@ func buildFinancialContext(
 
     sb.WriteString(fmt.Sprintf("Current Balance: %.2f %s\n\n", balance.Total, user.Currency))
 
-    sb.WriteString("Last 30 Days Summary:\n")
+    sb.WriteString("Last 90 Days Summary:\n")
     sb.WriteString(fmt.Sprintf("  Income:   %.2f %s\n", income, user.Currency))
     sb.WriteString(fmt.Sprintf("  Expenses: %.2f %s\n", expenses, user.Currency))
     sb.WriteString(fmt.Sprintf("  Net Flow: %.2f %s\n\n", income-expenses, user.Currency))
@@ -118,7 +124,7 @@ func buildFinancialContext(
     // Top spending categories (max 5 to avoid token limit)
     expenseCats := filterByType(categories, "expense")
     if len(expenseCats) > 0 {
-        sb.WriteString("Top Spending Categories (last 30 days):\n")
+        sb.WriteString("Top Spending Categories (last 90 days):\n")
         limit := 5
         if len(expenseCats) < limit {
             limit = len(expenseCats)

@@ -2,6 +2,8 @@ package handler
 
 import (
 	"net/http"
+
+	"github.com/SauletTheBest/BackendFinancialApplication/internal/ai"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/usecase"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -11,9 +13,9 @@ type ChatHandler struct {
     ChatUseCase *usecase.ChatUseCase
 }
 
-// chatRequest is what Flutter sends in the request body
 type chatRequest struct {
-    Message string `json:"message" binding:"required"`
+    Message string           `json:"message" binding:"required"`
+    History []ai.ChatMessage `json:"history"`
 }
 
 // chatResponse is what we send back to Flutter
@@ -39,7 +41,7 @@ func (h *ChatHandler) Chat(c *gin.Context) {
     }
 
     // 3. Call usecase — it handles all the DB fetching + AI call
-    reply, err := h.ChatUseCase.Chat(c.Request.Context(), userID, req.Message)
+    reply, err := h.ChatUseCase.Chat(c.Request.Context(), userID, req.History, req.Message)
     if err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
         return

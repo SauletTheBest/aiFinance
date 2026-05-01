@@ -57,14 +57,15 @@ func cleanJSONResponse(raw string) string {
 
 // ---------- OpenRouter request / response structs ----------
 
-type chatRequest struct {
-	Model    string        `json:"model"`
-	Messages []chatMessage `json:"messages"`
-}
-
-type chatMessage struct {
+// ChatMessage represents a single message in the conversation.
+type ChatMessage struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
+}
+
+type chatRequest struct {
+	Model    string         `json:"model"`
+	Messages []ChatMessage `json:"messages"`
 }
 
 type chatResponse struct {
@@ -96,7 +97,7 @@ func (c *OpenRouterClient) CategorizeTransactions(ctx context.Context, items map
 
 	reqBody := chatRequest{
 		Model: c.model,
-		Messages: []chatMessage{
+		Messages: []ChatMessage{
 			{
 				Role:    "system",
 				Content: categorizationPrompt,
@@ -185,56 +186,59 @@ func buildPrompt(items map[uuid.UUID]string) string {
 }
 
 
-// Chat sends a user message to OpenRouter with a pre-built financial context.
-// The advisorPrompt (from advisor.txt) is the static rules part.
-// The systemPrompt argument contains the live user data built at runtime.
-func (c *OpenRouterClient) Chat(ctx context.Context, systemPrompt string, userMessage string) (string, error) {
-    reqBody := chatRequest{
-        Model: c.model,
-        Messages: []chatMessage{
-            {Role: "system", Content: systemPrompt},  // rules + live user data
-            {Role: "user", Content: userMessage},     // what user actually typed
-        },
-    }
+// Chat sends a user message to OpenRouter with a pre-built financial context and history.
+func (c *OpenRouterClient) Chat(ctx context.Context, systemPrompt string, history []ChatMessage) (string, error) {
+	// Build the message list: System Prompt + History
+	messages := make([]ChatMessage, 0, len(history)+1)
+	messages = append(messages, ChatMessage{
+		Role:    "system",
+		Content: systemPrompt,
+	})
+	messages = append(messages, history...)
 
-    bodyBytes, err := json.Marshal(reqBody)
-    if err != nil {
-        return "", fmt.Errorf("ai: chat marshal error: %w", err)
-    }
+	reqBody := chatRequest{
+		Model:    c.model,
+		Messages: messages,
+	}
 
-    req, err := http.NewRequestWithContext(ctx, http.MethodPost,
-        "https://openrouter.ai/api/v1/chat/completions",
-        bytes.NewReader(bodyBytes))
-    if err != nil {
-        return "", fmt.Errorf("ai: chat request build error: %w", err)
-    }
+	bodyBytes, err := json.Marshal(reqBody)
+	if err != nil {
+		return "", fmt.Errorf("ai: chat marshal error: %w", err)
+	}
 
-    req.Header.Set("Content-Type", "application/json")
-    req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
+		"https://openrouter.ai/api/v1/chat/completions",
+		bytes.NewReader(bodyBytes))
+	if err != nil {
+		return "", fmt.Errorf("ai: chat request build error: %w", err)
+	}
 
-    resp, err := c.httpClient.Do(req)
-    if err != nil {
-        return "", fmt.Errorf("ai: chat http error: %w", err)
-    }
-    defer resp.Body.Close()
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 
-    respBytes, err := io.ReadAll(resp.Body)
-    if err != nil {
-        return "", fmt.Errorf("ai: chat read error: %w", err)
-    }
-    if resp.StatusCode != http.StatusOK {
-        return "", fmt.Errorf("ai: chat status %d: %s", resp.StatusCode, string(respBytes))
-    }
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("ai: chat http error: %w", err)
+	}
+	defer resp.Body.Close()
 
-    var chatResp chatResponse
-    if err := json.Unmarshal(respBytes, &chatResp); err != nil {
-        return "", fmt.Errorf("ai: chat parse error: %w", err)
-    }
-    if len(chatResp.Choices) == 0 {
-        return "", fmt.Errorf("ai: chat no choices returned")
-    }
+	respBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("ai: chat read error: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("ai: chat status %d: %s", resp.StatusCode, string(respBytes))
+	}
 
-    return chatResp.Choices[0].Message.Content, nil
+	var chatResp chatResponse
+	if err := json.Unmarshal(respBytes, &chatResp); err != nil {
+		return "", fmt.Errorf("ai: chat parse error: %w", err)
+	}
+	if len(chatResp.Choices) == 0 {
+		return "", fmt.Errorf("ai: chat no choices returned")
+	}
+
+	return chatResp.Choices[0].Message.Content, nil
 }
 
 // GetAdvisorPrompt returns the static advisor rules loaded from advisor.txt
