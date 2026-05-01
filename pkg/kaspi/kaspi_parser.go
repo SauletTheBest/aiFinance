@@ -2,10 +2,9 @@ package kaspi
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"time"
-
+	"log"
 	"github.com/ledongthuc/pdf"
 )
 
@@ -53,11 +52,8 @@ func ParsePDF(filePath string) ([]RawTransaction, error) {
 //   - Column 3: Operation type (Перевод, Покупка, Пополнение, Снятие)
 //   - Column 4: Details (На Kaspi Депозит, Ясмін, etc.)
 func extractTransactions(lines []string) ([]RawTransaction, error) {
-	var dates []string
-	var amounts []string
-	var categories []string
-	var details []string
-
+	var transactions []RawTransaction
+	var current *RawTransaction
 	inTable := false
 
 	for _, line := range lines {
@@ -82,52 +78,52 @@ func extractTransactions(lines []string) ([]RawTransaction, error) {
 			continue
 		}
 
-		// Route each line into the appropriate column bucket
+		// 💡 A new date means a NEW transaction row starts!
+		if IsDate(line) {
+			if current != nil {
+				// Log a warning if we are saving a transaction that has no amount
+				if current.Amount == 0 {
+					log.Printf("Warning: Transaction on %s has no amount. Details: %s", current.Date.Format("02.01.06"), current.Description)
+				}
+				transactions = append(transactions, *current)
+			}
+			dateParsed, err := time.Parse("02.01.06", line)
+			if err != nil {
+				dateParsed = time.Now()
+			}
+			current = &RawTransaction{Date: dateParsed}
+			continue
+		}
+
+		if current == nil {
+			continue
+		}
+
+		// 💡 Much cleaner switch case!
 		switch {
-		case IsDate(line):
-			dates = append(dates, line)
-		case IsAmount(line):
-			amounts = append(amounts, line)
-		case IsCategory(line):
-			categories = append(categories, line)
+		case IsAmount(line) && current.Amount == 0:
+			current.Amount = ParseAmount(line)
+			
+		case IsCategory(line) && current.Category == "":
+			current.Category = line
+			
 		default:
-			details = append(details, line)
+			// If it's not a date, amount, or category, it MUST be a detail.
+			if current.Description == "" {
+				current.Description = line
+			} else {
+				current.Description += " " + line // Appends multi-line details safely!
+			}
 		}
 	}
 
-	// Find minimum length to avoid panic if the parser missed a line
-	minLen := len(dates)
-	if len(amounts) < minLen {
-		minLen = len(amounts)
-	}
-	if len(categories) < minLen {
-		minLen = len(categories)
-	}
-	if len(details) < minLen {
-		minLen = len(details)
+	// Don't forget to add the very last transaction!
+	if current != nil {
+		transactions = append(transactions, *current)
 	}
 
-	// Log column mismatch for debugging (not returned as error since partial results are still useful)
-	if len(dates) != len(amounts) || len(amounts) != len(categories) || len(categories) != len(details) {
-		log.Printf("Warning: column length mismatch — Dates: %d, Amounts: %d, Categories: %d, Details: %d",
-			len(dates), len(amounts), len(categories), len(details))
-	}
-
-	// Zip columns together into raw transactions
-	transactions := make([]RawTransaction, 0, minLen)
-	for i := 0; i < minLen; i++ {
-		dateParsed, err := time.Parse("02.01.06", dates[i])
-		if err != nil {
-			dateParsed = time.Now()
-		}
-
-		transactions = append(transactions, RawTransaction{
-			Date:        dateParsed,
-			Amount:      ParseAmount(amounts[i]),
-			Category:    categories[i],
-			Description: details[i],
-		})
-	}
+	// 💡 Great success log!
+	log.Printf("Successfully extracted %d transactions using Row-Based parsing.", len(transactions))
 
 	return transactions, nil
 }

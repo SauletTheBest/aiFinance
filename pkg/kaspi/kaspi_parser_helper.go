@@ -29,6 +29,9 @@ var systemSubstrings = []string{
 	"www.kaspi.kz",
 	"сумма заблокирована",
 	"ожидает подтверждения",
+	"приложение к справке",        
+	"раздел «краткое содержание",
+	"содержит информацию об операциях",
 }
 
 // IsDate checks whether the line is a Kaspi date (DD.MM.YY)
