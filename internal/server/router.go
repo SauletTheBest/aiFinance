@@ -5,10 +5,19 @@ import (
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/handler"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/middleware"
 	"github.com/SauletTheBest/BackendFinancialApplication/pkg/jwt"
+	"github.com/gin-contrib/cors"
 )
 
-func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHandler, transactionHandler *handler.TransactionHandler, statisticsHandler *handler.StatisticsHandler, parserHandler *handler.ParserHandler, goalHandler *handler.GoalHandler, jwtSvc *jwt.Service) *gin.Engine {
+func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHandler, transactionHandler *handler.TransactionHandler, statisticsHandler *handler.StatisticsHandler, parserHandler *handler.ParserHandler, goalHandler *handler.GoalHandler, chatHandler *handler.ChatHandler, insightHandler *handler.InsightHandler, jwtSvc *jwt.Service) *gin.Engine {
 	router := gin.Default()
+
+	config := cors.DefaultConfig()
+	config.AllowAllOrigins = true // Great for development! In deployment phase need to change.
+	config.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization", "Accept"}
+	config.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
+	
+	router.Use(cors.New(config))
+
 
 	// Health check
 	router.GET("/api/health", func(c *gin.Context) {
@@ -52,6 +61,11 @@ func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHand
 		protected.GET("/goals/:id", goalHandler.GetGoal)
 		protected.PATCH("/goals/:id", goalHandler.UpdateGoal)
 		protected.DELETE("/goals/:id", goalHandler.DeleteGoal)
+
+		protected.POST("/ai/chat", chatHandler.Chat)
+
+		// Assuming you passed insightHandler into your router setup
+        protected.GET("/insights", insightHandler.GetInsights)
 
 	}
 	

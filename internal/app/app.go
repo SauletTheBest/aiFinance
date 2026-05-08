@@ -41,13 +41,16 @@ func NewApp(cfg *config.Config) *App {
 	if err := db.RunMigrations(database); err != nil {
 		log.Fatalf("Failed to run migrations: %v", err)
 	} 
-	
+
+	aiClient := ai.NewOpenRouterClient(cfg.OpenRouterAPIKey, cfg.OpenRouterModel)
+
 	jwtSvc := jwt.NewService(cfg.JWTSecret)
 
 	userRepo := postgres.NewUserRepo(database)
 	transactionRepo := postgres.NewTransactionRepo(database)
 	statisticsRepo := postgres.NewStatisticsRepo(database)
 	goalRepo := postgres.NewGoalRepo(database)
+	insightRepo := postgres.NewInsightRepo(database)
 
 	authUsecase := usecase.NewAuthUsecase(userRepo, jwtSvc)
 	userUsecase := usecase.NewUserUseCase(userRepo)
@@ -55,6 +58,9 @@ func NewApp(cfg *config.Config) *App {
 	transactionUsecase := usecase.NewTransactionUsecase(transactionRepo, userRepo)
 	parserUsecase := usecase.NewParserUseCase(transactionRepo, userRepo)
 	goalUsecase := usecase.NewGoalUseCase(goalRepo)
+	insightUseCase := usecase.NewInsightUseCase(insightRepo, statisticsRepo, goalRepo, aiClient)
+	
+	chatUsecase := usecase.NewChatUseCase(userRepo, goalRepo, statisticsRepo, aiClient)
 
 	authHandler := &handler.AuthHandler{AuthUsecase: authUsecase}
 	userHandler := &handler.UserHandler{UserUsecase: userUsecase}
@@ -62,10 +68,12 @@ func NewApp(cfg *config.Config) *App {
 	parserHandler := &handler.ParserHandler{ParserUseCase: parserUsecase}
 	statisticsHandler := &handler.StatisticsHandler{StatisticsUsecase: statisticsUsecase}
 	goalHandler := &handler.GoalHandler{GoalUseCase: goalUsecase}
+	insightHandler := handler.NewInsightHandler(insightUseCase)
 	
-	router := server.SetupRouter(authHandler, userHandler, transactionHandler, statisticsHandler, parserHandler, goalHandler, jwtSvc)
+	chatHandler := &handler.ChatHandler{ChatUseCase: chatUsecase}
 	
-	aiClient := ai.NewOpenRouterClient(cfg.OpenRouterAPIKey, cfg.OpenRouterModel)
+	router := server.SetupRouter(authHandler, userHandler, transactionHandler, statisticsHandler, parserHandler, goalHandler, chatHandler, insightHandler, jwtSvc)
+
 	categorizer := worker.NewCategorizationWorker(transactionRepo, aiClient)
 
 	port := os.Getenv("SERVER_PORT")
