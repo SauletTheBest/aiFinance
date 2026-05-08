@@ -50,6 +50,7 @@ func NewApp(cfg *config.Config) *App {
 	transactionRepo := postgres.NewTransactionRepo(database)
 	statisticsRepo := postgres.NewStatisticsRepo(database)
 	goalRepo := postgres.NewGoalRepo(database)
+	insightRepo := postgres.NewInsightRepo(database)
 
 	authUsecase := usecase.NewAuthUsecase(userRepo, jwtSvc)
 	userUsecase := usecase.NewUserUseCase(userRepo)
@@ -57,6 +58,7 @@ func NewApp(cfg *config.Config) *App {
 	transactionUsecase := usecase.NewTransactionUsecase(transactionRepo, userRepo)
 	parserUsecase := usecase.NewParserUseCase(transactionRepo, userRepo)
 	goalUsecase := usecase.NewGoalUseCase(goalRepo)
+	insightUseCase := usecase.NewInsightUseCase(insightRepo, statisticsRepo, goalRepo, aiClient)
 	
 	chatUsecase := usecase.NewChatUseCase(userRepo, goalRepo, statisticsRepo, aiClient)
 
@@ -66,10 +68,11 @@ func NewApp(cfg *config.Config) *App {
 	parserHandler := &handler.ParserHandler{ParserUseCase: parserUsecase}
 	statisticsHandler := &handler.StatisticsHandler{StatisticsUsecase: statisticsUsecase}
 	goalHandler := &handler.GoalHandler{GoalUseCase: goalUsecase}
+	insightHandler := handler.NewInsightHandler(insightUseCase)
 	
 	chatHandler := &handler.ChatHandler{ChatUseCase: chatUsecase}
 	
-	router := server.SetupRouter(authHandler, userHandler, transactionHandler, statisticsHandler, parserHandler, goalHandler, chatHandler, jwtSvc)
+	router := server.SetupRouter(authHandler, userHandler, transactionHandler, statisticsHandler, parserHandler, goalHandler, chatHandler, insightHandler, jwtSvc)
 
 	categorizer := worker.NewCategorizationWorker(transactionRepo, aiClient)
 

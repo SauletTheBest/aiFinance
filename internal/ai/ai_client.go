@@ -19,6 +19,9 @@ var categorizationPrompt string
 //go:embed prompts/advisor.txt
 var advisorPrompt string 
 
+//go:embed prompts/insight.txt
+var insightPrompt string
+
 // CategoryResult holds the AI's categorization decision for a single transaction.
 type CategoryResult struct {
 	TransactionID uuid.UUID
@@ -245,3 +248,61 @@ func (c *OpenRouterClient) Chat(ctx context.Context, systemPrompt string, histor
 func (c *OpenRouterClient) GetAdvisorPrompt() string {
     return advisorPrompt
 }
+
+
+// GenerateInsight asks OpenRouter to create a short financial insight based on provided data context.
+func (c *OpenRouterClient) GenerateInsight(ctx context.Context, dataContext string) (string, error) {
+	reqBody := chatRequest{
+		Model: c.model,
+		Messages: []ChatMessage{
+			{
+				Role:    "system",
+				Content: insightPrompt, // Our strict rules
+			},
+			{
+				Role:    "user",
+				Content: dataContext,   // The raw numbers we will send from the UseCase
+			},
+		},
+	}
+
+	bodyBytes, err := json.Marshal(reqBody)
+	if err != nil {
+		return "", fmt.Errorf("ai: insight marshal error: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
+		"https://openrouter.ai/api/v1/chat/completions",
+		bytes.NewReader(bodyBytes))
+	if err != nil {
+		return "", fmt.Errorf("ai: insight request build error: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("ai: insight http error: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("ai: insight read error: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("ai: insight status %d: %s", resp.StatusCode, string(respBytes))
+	}
+
+	var chatResp chatResponse
+	if err := json.Unmarshal(respBytes, &chatResp); err != nil {
+		return "", fmt.Errorf("ai: insight parse error: %w", err)
+	}
+	if len(chatResp.Choices) == 0 {
+		return "", fmt.Errorf("ai: insight no choices returned")
+	}
+
+	return chatResp.Choices[0].Message.Content, nil
+}
+
