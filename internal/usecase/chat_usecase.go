@@ -49,6 +49,9 @@ func (uc *ChatUseCase) Chat(ctx context.Context, userID uuid.UUID, history []ai.
     if err != nil {
         return "", fmt.Errorf("chat: get balance failed: %w", err)
     }
+    
+    // 💡 Apply the user's opening offset, same as StatisticsUsecase does!
+    balance.Total = user.BaseBalance + balance.Total
 
     // 3. Get last 90 days income & expenses
     now := time.Now()
