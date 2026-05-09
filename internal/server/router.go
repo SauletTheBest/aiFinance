@@ -66,6 +66,7 @@ func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHand
 
 		// Assuming you passed insightHandler into your router setup
         protected.GET("/insights", insightHandler.GetInsights)
+		protected.POST("/insights/refresh", insightHandler.RefreshInsight)
 
 	}
 	
