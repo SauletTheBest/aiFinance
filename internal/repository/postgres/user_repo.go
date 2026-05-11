@@ -20,6 +20,7 @@ type User struct {
 	PasswordHash string
 	Currency     string    `gorm:"type:varchar(3);not null;default:'KZT'"`
 	BaseBalance  float64   `gorm:"not null;default:0"`
+	IsVerified   bool
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }
@@ -32,6 +33,7 @@ func usertoDomain(model *User) *domain.User {
 		PasswordHash: model.PasswordHash,
 		Currency:     model.Currency,
 		BaseBalance:  model.BaseBalance,
+		IsVerified:	  model.IsVerified,
 		CreatedAt:    model.CreatedAt,
 		UpdatedAt:    model.UpdatedAt,
 	}
@@ -45,6 +47,7 @@ func toModel(user *domain.User) *User {
 		PasswordHash: user.PasswordHash,
 		Currency:     user.Currency,
 		BaseBalance:  user.BaseBalance,
+		IsVerified:   user.IsVerified,
 		CreatedAt:    user.CreatedAt,
 		UpdatedAt:    user.UpdatedAt,
 	}

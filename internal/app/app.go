@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/ai"
+	"github.com/SauletTheBest/BackendFinancialApplication/internal/email"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/config"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/db"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/handler"
@@ -51,8 +52,11 @@ func NewApp(cfg *config.Config) *App {
 	statisticsRepo := postgres.NewStatisticsRepo(database)
 	goalRepo := postgres.NewGoalRepo(database)
 	insightRepo := postgres.NewInsightRepo(database)
+	verificationRepo := postgres.NewVerificationRepo(database)
 
-	authUsecase := usecase.NewAuthUsecase(userRepo, jwtSvc)
+	emailSvc := email.NewEmailService(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass)
+	
+	authUsecase := usecase.NewAuthUsecase(userRepo, jwtSvc,  verificationRepo, emailSvc)
 	userUsecase := usecase.NewUserUseCase(userRepo)
 	statisticsUsecase := usecase.NewStatisticsUsecase(statisticsRepo, transactionRepo, userRepo)
 	transactionUsecase := usecase.NewTransactionUsecase(transactionRepo, userRepo)
@@ -61,7 +65,7 @@ func NewApp(cfg *config.Config) *App {
 	insightUseCase := usecase.NewInsightUseCase(insightRepo, statisticsRepo, goalRepo, aiClient)
 	
 	chatUsecase := usecase.NewChatUseCase(userRepo, goalRepo, statisticsRepo, aiClient)
-
+	
 	authHandler := &handler.AuthHandler{AuthUsecase: authUsecase}
 	userHandler := &handler.UserHandler{UserUsecase: userUsecase}
 	transactionHandler := &handler.TransactionHandler{TransactionUsecase: transactionUsecase}
@@ -73,8 +77,9 @@ func NewApp(cfg *config.Config) *App {
 	chatHandler := &handler.ChatHandler{ChatUseCase: chatUsecase}
 	
 	router := server.SetupRouter(authHandler, userHandler, transactionHandler, statisticsHandler, parserHandler, goalHandler, chatHandler, insightHandler, jwtSvc)
-
+	
 	categorizer := worker.NewCategorizationWorker(transactionRepo, aiClient)
+	
 
 	port := os.Getenv("SERVER_PORT")
 	if port == "" {
