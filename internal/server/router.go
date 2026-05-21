@@ -31,6 +31,9 @@ func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHand
 	{
 		auth.POST("/register", authHandler.Register)
 		auth.POST("/login", authHandler.Login)
+		auth.POST("/forgot-password", authHandler.ForgotPassword) 	
+        auth.POST("/reset-password", authHandler.ResetPassword)
+		auth.POST("/verify-email", authHandler.VerifyEmail)
 	}
 
 	// Protected routes
@@ -64,9 +67,8 @@ func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHand
 
 		protected.POST("/ai/chat", chatHandler.Chat)
 
-		// Assuming you passed insightHandler into your router setup
         protected.GET("/insights", insightHandler.GetInsights)
-
+		protected.POST("/insights/refresh", insightHandler.RefreshInsight)
 	}
 	
 	return router

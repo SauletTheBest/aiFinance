@@ -148,3 +148,45 @@ func buildInsightContext(income, expenses float64, balance *domain.Balance, cate
 
 	return sb.String()
 }
+
+
+// ForceRefreshInsight generates a brand new insight regardless of cache.
+// The OLD insight stays in the database as history.
+func (uc *InsightUseCase) ForceRefreshInsight(ctx context.Context, userID uuid.UUID, typeStr string) (*domain.AIInsight, error) {
+    iType := domain.InsightType(typeStr)
+    // 1. Gather fresh data from DB
+    now := time.Now()
+    start := now.AddDate(0, -1, 0) // last 30 days
+
+    income, expenses, _ := uc.statisticsRepo.GetIncomeExpense(ctx, userID, &start, &now)
+    categories, _ := uc.statisticsRepo.GetCategories(ctx, userID, &start, &now)
+    balance, _ := uc.statisticsRepo.GetBalance(ctx, userID)
+    goals, _ := uc.goalRepo.GetByUserID(ctx, userID)
+
+    // 2. Build data context
+    dataContext := buildInsightContext(income, expenses, balance, categories, goals)
+
+    // 3. Tell AI which topic to focus on
+    prompt := fmt.Sprintf("TOPIC: %s\n\n%s", string(iType), dataContext)
+
+    // 4. Call AI directly — NO freshness check! Always generates new!
+    aiText, err := uc.aiClient.GenerateInsight(ctx, prompt)
+    if err != nil {
+        return nil, fmt.Errorf("refresh: AI call failed: %w", err)
+    }
+
+    // 5. Save as a NEW row (old insight stays in DB as history!)
+    newInsight := &domain.AIInsight{
+        ID:          uuid.New(),
+        UserID:      userID,
+        Content:     aiText,
+        InsightType: iType,
+        CreatedAt:   now,
+    }
+
+    if err := uc.insightRepo.Create(ctx, newInsight); err != nil {
+        return nil, fmt.Errorf("refresh: save failed: %w", err)
+    }
+
+    return newInsight, nil
+}

@@ -15,6 +15,10 @@ type Config struct {
 	ServerPort int
 	OpenRouterAPIKey string
 	OpenRouterModel  string
+	SMTPHost string
+	SMTPPort string
+	SMTPUser string
+	SMTPPass string
 }
 
 func Load() *Config {
@@ -31,6 +35,10 @@ func Load() *Config {
 		ServerPort:       serverPort,
 		OpenRouterAPIKey: getEnv("OPENROUTER_API_KEY", ""),
 		OpenRouterModel:  getEnv("OPENROUTER_MODEL", "nvidia/nemotron-3-super-120b-a12b:free"),
+		SMTPHost:         getEnv("SMTP_HOST", "smtp.gmail.com"),
+		SMTPPort:         getEnv("SMTP_PORT", "587"),
+		SMTPUser:         getEnv("SMTP_USER", ""),
+		SMTPPass:         getEnv("SMTP_PASSWORD",""),
 	}
 }
 

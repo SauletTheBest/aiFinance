@@ -59,8 +59,6 @@ func (w *CategorizationWorker) Start(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			// Graceful shutdown: revert any in-progress batch back to PENDING
-			// Use a fresh context because the original one is already cancelled
 			log.Println("[Worker] Shutdown received — reverting in-progress transactions to PENDING...")
 			w.RecoverStuck(context.Background())
 			log.Println("[Worker] Worker stopped cleanly")
