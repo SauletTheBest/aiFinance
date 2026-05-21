@@ -23,7 +23,7 @@ type Config struct {
 
 func Load() *Config {
 	dbPort, _ := strconv.Atoi(getEnv("DB_PORT", "5432"))
-	serverPort, _ := strconv.Atoi(getEnv("SERVER_PORT", "8080"))
+	serverPort, _ := strconv.Atoi(getEnv("PORT", "8080"))
 
 	return &Config{
 		DBHost:           getEnv("DB_HOST", "localhost"),

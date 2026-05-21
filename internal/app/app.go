@@ -81,7 +81,7 @@ func NewApp(cfg *config.Config) *App {
 	categorizer := worker.NewCategorizationWorker(transactionRepo, aiClient)
 	
 
-	port := os.Getenv("SERVER_PORT")
+	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
