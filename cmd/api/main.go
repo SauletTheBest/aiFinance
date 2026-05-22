@@ -10,8 +10,12 @@ import (
 
 func main() {
 	// 1. Load .env file (if it exists)
-	if err := godotenv.Load("../../.env"); err != nil {
-		log.Println("No .env file found")
+	// Try loading .env from current directory (Render / root run)
+	if err := godotenv.Load(); err != nil {
+		// Fallback: try loading from 2 levels up (local run inside cmd/api)
+		if err := godotenv.Load("../../.env"); err != nil {
+			log.Println("No .env file found, relying on system environment variables")
+		}
 	}
 
 	// 2. Load all configuration variables

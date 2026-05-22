@@ -1,13 +1,17 @@
 package db
 
 import (
+	"embed"
 	"log"
-	"os"
-	"path/filepath"
 	"sort"
+	"strings"
+
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
+
+//go:embed migrations/*.up.sql
+var migrationFiles embed.FS
 
 func NewPostgres(dsn string) (*gorm.DB, error) {
 
@@ -19,48 +23,45 @@ func NewPostgres(dsn string) (*gorm.DB, error) {
 }
 
 func RunMigrations(db *gorm.DB) error {
-    sqlDB, err := db.DB()
-    if err != nil {
-        return err
-    }
-
-    migrationsDir := "../../internal/db/migrations"
-
-    log.Printf("Looking for migrations in: %s", migrationsDir)
-
-	wd, _ := os.Getwd()     //to check your current dir
-	log.Println("WORKDIR:", wd)
-
-	log.Println("Checking migrations dir exists:", migrationsDir)
-
-	if _, err := os.Stat(migrationsDir); err != nil {
-		log.Println("MIGRATIONS DIR ERROR:", err)
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
 	}
 
-    files, err := filepath.Glob(filepath.Join(migrationsDir, "*.up.sql"))
-    if err != nil {
-        return err
-    }
+	// Read files from our embedded filesystem (no disk paths needed!)
+	files, err := migrationFiles.ReadDir("migrations")
+	if err != nil {
+		return err
+	}
 
-    sort.Strings(files)
+	var migrationFileNames []string
+	for _, file := range files {
+		// Only run '.up.sql' files
+		if !file.IsDir() && strings.HasSuffix(file.Name(), ".up.sql") {
+			migrationFileNames = append(migrationFileNames, file.Name())
+		}
+	}
 
-    log.Printf("Found %d migration files: %v", len(files), files)
+	// Sort them alphabetically to ensure they execute in order (000001, 000002, etc.)
+	sort.Strings(migrationFileNames)
 
-    for _, file := range files {
-        log.Printf("Executing migration: %s", file)
+	log.Printf("Found %d embedded up-migration files", len(migrationFileNames))
 
-        content, err := os.ReadFile(file) 
-        if err != nil {
-            return err
-        }
+	for _, fileName := range migrationFileNames {
+		log.Printf("Executing embedded migration: %s", fileName)
 
-        _, err = sqlDB.Exec(string(content))
-        if err != nil {
-            return err
-        }
+		content, err := migrationFiles.ReadFile("migrations/" + fileName)
+		if err != nil {
+			return err
+		}
 
-        log.Printf("Migration %s executed successfully", file)
-    }
+		_, err = sqlDB.Exec(string(content))
+		if err != nil {
+			return err
+		}
 
-    return nil
+		log.Printf("Migration %s executed successfully", fileName)
+	}
+
+	return nil
 }
