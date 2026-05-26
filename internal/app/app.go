@@ -1,5 +1,4 @@
-package app 
-
+package app
 
 import (
 	"context"
@@ -10,9 +9,9 @@ import (
 	"syscall"
 
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/ai"
-	"github.com/SauletTheBest/BackendFinancialApplication/internal/email"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/config"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/db"
+	"github.com/SauletTheBest/BackendFinancialApplication/internal/email"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/handler"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/repository/postgres"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/server"
@@ -23,16 +22,16 @@ import (
 )
 
 type App struct {
-	router 			*gin.Engine 
-	categorizer 	*worker.CategorizationWorker
-	port     		string
+	router      *gin.Engine
+	categorizer *worker.CategorizationWorker
+	port        string
 }
 
 func NewApp(cfg *config.Config) *App {
-	
+
 	//data sourse name
 	dsn := fmt.Sprintf("host=%s port= %d user=%s password=%s dbname=%s sslmode=disable",
-	cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName) 
+		cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName)
 
 	database, err := db.NewPostgres(dsn)
 	if err != nil {
@@ -41,7 +40,7 @@ func NewApp(cfg *config.Config) *App {
 
 	if err := db.RunMigrations(database); err != nil {
 		log.Fatalf("Failed to run migrations: %v", err)
-	} 
+	}
 
 	aiClient := ai.NewOpenRouterClient(cfg.OpenRouterAPIKey, cfg.OpenRouterModel)
 
@@ -54,18 +53,18 @@ func NewApp(cfg *config.Config) *App {
 	insightRepo := postgres.NewInsightRepo(database)
 	verificationRepo := postgres.NewVerificationRepo(database)
 
-	emailSvc := email.NewEmailService(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass)
-	
-	authUsecase := usecase.NewAuthUsecase(userRepo, jwtSvc,  verificationRepo, emailSvc)
+	emailSvc := email.NewEmailService(cfg.GmailClientID, cfg.GmailClientSecret, cfg.GmailRefreshToken, cfg.GmailSender)
+
+	authUsecase := usecase.NewAuthUsecase(userRepo, jwtSvc, verificationRepo, emailSvc)
 	userUsecase := usecase.NewUserUseCase(userRepo)
 	statisticsUsecase := usecase.NewStatisticsUsecase(statisticsRepo, transactionRepo, userRepo)
 	transactionUsecase := usecase.NewTransactionUsecase(transactionRepo, userRepo)
 	parserUsecase := usecase.NewParserUseCase(transactionRepo, userRepo)
 	goalUsecase := usecase.NewGoalUseCase(goalRepo)
 	insightUseCase := usecase.NewInsightUseCase(insightRepo, statisticsRepo, goalRepo, aiClient)
-	
+
 	chatUsecase := usecase.NewChatUseCase(userRepo, goalRepo, statisticsRepo, aiClient)
-	
+
 	authHandler := &handler.AuthHandler{AuthUsecase: authUsecase}
 	userHandler := &handler.UserHandler{UserUsecase: userUsecase}
 	transactionHandler := &handler.TransactionHandler{TransactionUsecase: transactionUsecase}
@@ -73,22 +72,21 @@ func NewApp(cfg *config.Config) *App {
 	statisticsHandler := &handler.StatisticsHandler{StatisticsUsecase: statisticsUsecase}
 	goalHandler := &handler.GoalHandler{GoalUseCase: goalUsecase}
 	insightHandler := handler.NewInsightHandler(insightUseCase)
-	
+
 	chatHandler := &handler.ChatHandler{ChatUseCase: chatUsecase}
-	
+
 	router := server.SetupRouter(authHandler, userHandler, transactionHandler, statisticsHandler, parserHandler, goalHandler, chatHandler, insightHandler, jwtSvc)
-	
+
 	categorizer := worker.NewCategorizationWorker(transactionRepo, aiClient)
-	
 
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 	return &App{
-		router: router,
+		router:      router,
 		categorizer: categorizer,
-		port: port,
+		port:        port,
 	}
 }
 
@@ -96,7 +94,7 @@ func (a *App) Run() {
 
 	// Startup recovery: reset any PROCESSING transactions left over from a previous crash
 	a.categorizer.RecoverStuck(context.Background())
-	
+
 	// Create a cancellable context for the worker
 	workerCtx, cancelWorker := context.WithCancel(context.Background())
 	go a.categorizer.Start(workerCtx)
