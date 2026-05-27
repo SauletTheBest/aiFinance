@@ -62,7 +62,12 @@ func (s *EmailService) getAccessToken() (string, error) {
 	return tokenResp.AccessToken, nil
 }
 
-// sendGmail base64-encodes the MIME email and posts it to the Gmail API
+// encodeRFC2047 converts any UTF-8 string (like Russian text) into safe standard email header format
+func encodeRFC2047(input string) string {
+	// Format: =?utf-8?B?[Base64_Encoded_Text]?=
+	return fmt.Sprintf("=?utf-8?B?%s?=", base64.StdEncoding.EncodeToString([]byte(input)))
+}
+
 // sendGmail base64-encodes the MIME email and posts it to the Gmail API
 func (s *EmailService) sendGmail(toEmail, subject, htmlBody string) error {
 	fmt.Printf("[Gmail Service] Starting email send process to: %s\n", toEmail)
@@ -76,12 +81,13 @@ func (s *EmailService) sendGmail(toEmail, subject, htmlBody string) error {
 	fmt.Println("[Gmail Service] 🟢 Access token refreshed successfully!")
 
 	// 1. Construct standard MIME headers & body
+	// We use the encodeRFC2047 helper here to make the Subject safe for Russian characters!
 	mimeMessage := fmt.Sprintf("From: %s\r\n"+
 		"To: %s\r\n"+
 		"Subject: %s\r\n"+
 		"MIME-Version: 1.0\r\n"+
 		"Content-Type: text/html; charset=\"utf-8\"\r\n\r\n"+
-		"%s", s.sender, toEmail, subject, htmlBody)
+		"%s", s.sender, toEmail, encodeRFC2047(subject), htmlBody)
 
 	// 2. Encode to Base64 URL Encoding
 	rawEncoded := base64.URLEncoding.EncodeToString([]byte(mimeMessage))
@@ -108,7 +114,7 @@ func (s *EmailService) sendGmail(toEmail, subject, htmlBody string) error {
 	req.Header.Set("Content-Type", "application/json")
 
 	fmt.Println("[Gmail Service] Sending request to Google Gmail API...")
-	
+
 	// 5. Execute the request
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -128,30 +134,30 @@ func (s *EmailService) sendGmail(toEmail, subject, htmlBody string) error {
 	return nil
 }
 
-// SendVerificationEmail sends a 4-digit code to verify the user's email
+// SendVerificationEmail sends a 4-digit code in Russian to verify the user's email
 func (s *EmailService) SendVerificationEmail(toEmail string, code string) error {
-	subject := "Verify your email — AI Finance App"
+	subject := "Подтверждение почты - AI Finance App"
 	body := fmt.Sprintf(`
 		<div style="font-family: Arial, sans-serif; max-width: 400px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
-			<h2 style="color: #1e293b;">Welcome to AI Finance! 🎉</h2>
-			<p style="color: #475569;">Your verification code is:</p>
+			<h2 style="color: #1e293b;">Добро пожаловать в AI Finance! 🎉</h2>
+			<p style="color: #475569;">Ваш код подтверждения:</p>
 			<h1 style="letter-spacing: 8px; color: #4F46E5; background-color: #f1f5f9; padding: 10px; text-align: center; border-radius: 5px;">%s</h1>
-			<p style="color: #94a3b8; font-size: 12px;">This code expires in 15 minutes.</p>
+			<p style="color: #94a3b8; font-size: 12px;">Этот код истекает через 15 минут.</p>
 		</div>
 	`, code)
 
 	return s.sendGmail(toEmail, subject, body)
 }
 
-// SendPasswordResetEmail sends a 4-digit code to reset the user's password
+// SendPasswordResetEmail sends a 4-digit code in Russian to reset the user's password
 func (s *EmailService) SendPasswordResetEmail(toEmail string, code string) error {
-	subject := "Reset your password — AI Finance App"
+	subject := "Сброс пароля - AI Finance App"
 	body := fmt.Sprintf(`
 		<div style="font-family: Arial, sans-serif; max-width: 400px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
-			<h2 style="color: #1e293b;">Password Reset Request 🔐</h2>
-			<p style="color: #475569;">Your reset code is:</p>
+			<h2 style="color: #1e293b;">Запрос на сброс пароля 🔐</h2>
+			<p style="color: #475569;">Ваш код для сброса пароля:</p>
 			<h1 style="letter-spacing: 8px; color: #DC2626; background-color: #fef2f2; padding: 10px; text-align: center; border-radius: 5px;">%s</h1>
-			<p style="color: #94a3b8; font-size: 12px;">This code expires in 15 minutes. If you didn't request this, ignore this email.</p>
+			<p style="color: #94a3b8; font-size: 12px;">Этот код истекает через 15 минут. Если вы не запрашивали сброс пароля, просто проигнорируйте это письмо.</p>
 		</div>
 	`, code)
 
