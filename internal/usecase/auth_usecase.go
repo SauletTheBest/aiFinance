@@ -223,7 +223,49 @@ func (u *AuthUsecase) ResetPassword(ctx context.Context, email, codeStr, newPass
 	return u.verificationRepo.MarkAsUsed(ctx, vCode.ID)
 }
 
-
 func generateVerificationCode() string {
 	return fmt.Sprintf("%04d", rand.Intn(10000))
+}
+
+// ResendVerificationCode generates a new code, cleans up old ones, and fires a background email
+func (u *AuthUsecase) ResendVerificationCode(ctx context.Context, email string) error {
+	// 1. Check if the user exists
+	user, err := u.userRepo.GetByEmail(ctx, email)
+	if err != nil {
+		return errors.New("user not found")
+	}
+
+	// 2. If already verified, we shouldn't send anything
+	if user.IsVerified {
+		return errors.New("email is already verified")
+	}
+
+	// 3. Generate a new 4-digit code
+	codeStr := generateVerificationCode()
+
+	vCode := &domain.VerificationCode{
+		ID:        uuid.New(),
+		UserID:    user.ID,
+		Code:      codeStr,
+		CodeType:  domain.CodeTypeEmailVerify,
+		ExpiresAt: time.Now().Add(15 * time.Minute),
+		Used:      false,
+		CreatedAt: time.Now(),
+	}
+
+	// 4. Save to database (this automatically triggers the clean-up we wrote in Repo!)
+	err = u.verificationRepo.Create(ctx, vCode)
+	if err != nil {
+		return fmt.Errorf("failed to save verification code: %w", err)
+	}
+
+	// 5. Send email in a separate background routine so the user doesn't wait
+	go func() {
+		err := u.emailService.SendVerificationEmail(email, codeStr)
+		if err != nil {
+			fmt.Printf("Error sending verification email to %s: %v\n", email, err)
+		}
+	}()
+
+	return nil
 }

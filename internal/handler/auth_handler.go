@@ -120,3 +120,21 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Password reset successfully! You can now log in."})
 }
+// POST /api/auth/resend-code
+func (h *AuthHandler) ResendVerificationCode(c *gin.Context) {
+	var req dto.ResendCodeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request format"})
+		return
+	}
+
+	err := h.AuthUsecase.ResendVerificationCode(c.Request.Context(), req.Email)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "A new verification code has been sent successfully.",
+	})
+}

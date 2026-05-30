@@ -30,3 +30,7 @@ type ResetPasswordRequest struct {
 	Code        string `json:"code" binding:"required,len=4"`
 	NewPassword string `json:"new_password" binding:"required,min=6"`
 }
+
+type ResendCodeRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}

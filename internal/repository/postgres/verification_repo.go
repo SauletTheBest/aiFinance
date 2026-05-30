@@ -19,8 +19,18 @@ func NewVerificationRepo(db *gorm.DB) repository.VerificationRepository {
 }
 
 func (r *VerificationRepo) Create(ctx context.Context, code *domain.VerificationCode) error {
+	// Step 1: Clean the house! Delete any older codes for this user
+	err := r.db.WithContext(ctx).
+		Table("verification_codes").
+		Where("user_id = ? AND code_type = ?", code.UserID, code.CodeType).
+		Delete(&domain.VerificationCode{}).Error
+	if err != nil {
+		return err
+	}
+	// Step 2: Save the brand new code in the clean database
 	return r.db.WithContext(ctx).Table("verification_codes").Create(code).Error
 }
+
 
 func (r *VerificationRepo) GetValidCode(ctx context.Context, userID uuid.UUID, codeStr string, codeType string) (*domain.VerificationCode, error) {
 	var code domain.VerificationCode
