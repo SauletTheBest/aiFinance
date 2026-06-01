@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 	"strings"
+	"time"
+
 	"github.com/google/uuid"
 )
 
@@ -21,6 +23,12 @@ var advisorPrompt string
 
 //go:embed prompts/insight.txt
 var insightPrompt string
+
+//go:embed prompts/voice.txt
+var voicePrompt string
+
+//go:embed prompts/receipt.txt
+var receiptPrompt string
 
 // CategoryResult holds the AI's categorization decision for a single transaction.
 type CategoryResult struct {
@@ -306,3 +314,174 @@ func (c *OpenRouterClient) GenerateInsight(ctx context.Context, dataContext stri
 	return chatResp.Choices[0].Message.Content, nil
 }
 
+// ---------- Multimodal structs (for audio and image support) ----------
+
+// ContentPart represents one piece of content: text, image, or audio.
+type ContentPart struct {
+	Type       string      `json:"type"`
+	Text       string      `json:"text,omitempty"`
+	ImageURL   *ImageURL   `json:"image_url,omitempty"`
+	InputAudio *InputAudio `json:"input_audio,omitempty"`
+}
+
+type ImageURL struct {
+	URL string `json:"url"`
+}
+
+type InputAudio struct {
+	Data   string `json:"data"`
+	Format string `json:"format"`
+}
+
+// multimodalRequest is like chatRequest but Content is []ContentPart, not a string.
+type multimodalMessage struct {
+	Role    string        `json:"role"`
+	Content []ContentPart `json:"content"`
+}
+
+type multimodalRequest struct {
+	Model    string               `json:"model"`
+	Messages []interface{}        `json:"messages"`
+}
+
+// ---------- ParseAudio ----------
+
+// ParseAudio sends an audio file to OpenRouter for transcription and transaction extraction.
+// It returns a list of transactions found in the audio.
+func (c *OpenRouterClient) ParseAudio(ctx context.Context, audioBytes []byte, format string) ([]map[string]interface{}, error) {
+	base64Audio := encodeToBase64(audioBytes)
+
+	reqBody := multimodalRequest{
+		Model: c.model,
+		Messages: []interface{}{
+			ChatMessage{Role: "system", Content: voicePrompt},
+			multimodalMessage{
+				Role: "user",
+				Content: []ContentPart{
+					{
+						Type:       "input_audio",
+						InputAudio: &InputAudio{Data: base64Audio, Format: format},
+					},
+					{
+						Type: "text",
+						Text: "Transcribe this audio and extract transactions.",
+					},
+				},
+			},
+		},
+	}
+
+	return c.sendMultimodalRequest(ctx, reqBody)
+}
+
+// ---------- ParseReceiptImage ----------
+
+// ParseReceiptImage sends a receipt photo to OpenRouter for OCR and transaction extraction.
+// It returns a single transaction map (or nil if nothing found).
+func (c *OpenRouterClient) ParseReceiptImage(ctx context.Context, imageBytes []byte, mimeType string) (map[string]interface{}, error) {
+	base64Image := encodeToBase64(imageBytes)
+	dataURL := "data:" + mimeType + ";base64," + base64Image
+
+	reqBody := multimodalRequest{
+		Model: c.model,
+		Messages: []interface{}{
+			ChatMessage{Role: "system", Content: receiptPrompt},
+			multimodalMessage{
+				Role: "user",
+				Content: []ContentPart{
+					{
+						Type:     "image_url",
+						ImageURL: &ImageURL{URL: dataURL},
+					},
+					{
+						Type: "text",
+						Text: "Recognize this receipt and create one transaction for the total amount.",
+					},
+				},
+			},
+		},
+	}
+
+	results, err := c.sendMultimodalRequest(ctx, reqBody)
+	if err != nil {
+		return nil, err
+	}
+	if len(results) == 0 {
+		return nil, nil
+	}
+	return results[0], nil
+}
+
+// ---------- Shared helpers ----------
+
+// encodeToBase64 converts raw bytes into a base64 string.
+func encodeToBase64(data []byte) string {
+	return base64.StdEncoding.EncodeToString(data)
+}
+
+// sendMultimodalRequest sends the request to OpenRouter and parses the JSON array response.
+func (c *OpenRouterClient) sendMultimodalRequest(ctx context.Context, reqBody multimodalRequest) ([]map[string]interface{}, error) {
+	bodyBytes, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("ai: failed to marshal multimodal request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
+		"https://openrouter.ai/api/v1/chat/completions",
+		bytes.NewReader(bodyBytes))
+	if err != nil {
+		return nil, fmt.Errorf("ai: failed to build multimodal request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("ai: multimodal http error: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("ai: multimodal read error: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("ai: multimodal status %d: %s", resp.StatusCode, string(respBytes))
+	}
+
+	var chatResp chatResponse
+	if err := json.Unmarshal(respBytes, &chatResp); err != nil {
+		return nil, fmt.Errorf("ai: multimodal parse error: %w", err)
+	}
+	if len(chatResp.Choices) == 0 {
+		return nil, fmt.Errorf("ai: multimodal no choices returned")
+	}
+
+	rawContent := cleanJSONResponse(chatResp.Choices[0].Message.Content)
+	var voiceResponse struct {
+		Transcription string                   `json:"transcription"`
+		Transactions  []map[string]interface{} `json:"transactions"`
+	}
+	if err := json.Unmarshal([]byte(rawContent), &voiceResponse); err == nil && voiceResponse.Transcription != "" {
+		
+		for _, tx := range voiceResponse.Transactions {
+			tx["_transcription"] = voiceResponse.Transcription
+		}
+		return voiceResponse.Transactions, nil
+	}
+
+	// Try to parse as object first (receipt returns single object)
+	var single map[string]interface{}
+	if err := json.Unmarshal([]byte(rawContent), &single); err == nil {
+		return []map[string]interface{}{single}, nil
+	}
+
+	// Try to parse as array (voice returns array of transactions)
+	var many []map[string]interface{}
+	if err := json.Unmarshal([]byte(rawContent), &many); err == nil {
+		return many, nil
+	}
+
+	return nil, fmt.Errorf("ai: could not parse response as JSON: %s", rawContent)
+}

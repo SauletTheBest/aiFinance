@@ -72,10 +72,11 @@ func NewApp(cfg *config.Config) *App {
 	statisticsHandler := &handler.StatisticsHandler{StatisticsUsecase: statisticsUsecase}
 	goalHandler := &handler.GoalHandler{GoalUseCase: goalUsecase}
 	insightHandler := handler.NewInsightHandler(insightUseCase)
+	mediaHandler := &handler.MediaHandler{AIClient: aiClient}
 
 	chatHandler := &handler.ChatHandler{ChatUseCase: chatUsecase}
 
-	router := server.SetupRouter(authHandler, userHandler, transactionHandler, statisticsHandler, parserHandler, goalHandler, chatHandler, insightHandler, jwtSvc)
+	router := server.SetupRouter(authHandler, userHandler, transactionHandler, statisticsHandler, parserHandler, goalHandler, chatHandler, insightHandler, mediaHandler, jwtSvc)
 
 	categorizer := worker.NewCategorizationWorker(transactionRepo, aiClient)
 

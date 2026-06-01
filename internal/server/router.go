@@ -8,7 +8,8 @@ import (
 	"github.com/gin-contrib/cors"
 )
 
-func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHandler, transactionHandler *handler.TransactionHandler, statisticsHandler *handler.StatisticsHandler, parserHandler *handler.ParserHandler, goalHandler *handler.GoalHandler, chatHandler *handler.ChatHandler, insightHandler *handler.InsightHandler, jwtSvc *jwt.Service) *gin.Engine {
+func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHandler, transactionHandler *handler.TransactionHandler, statisticsHandler *handler.StatisticsHandler, parserHandler *handler.ParserHandler, goalHandler *handler.GoalHandler, chatHandler *handler.ChatHandler, insightHandler *handler.InsightHandler, mediaHandler *handler.MediaHandler, jwtSvc *jwt.Service) *gin.Engine {
+	
 	router := gin.Default()
 
 	config := cors.DefaultConfig()
@@ -68,6 +69,9 @@ func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHand
 		protected.DELETE("/goals/:id", goalHandler.DeleteGoal)
 
 		protected.POST("/ai/chat", chatHandler.Chat)
+
+		protected.POST("/ai/voice", mediaHandler.ParseVoice)  
+        protected.POST("/ai/receipt", mediaHandler.ParseReceipt)
 
         protected.GET("/insights", insightHandler.GetInsights)
 		protected.POST("/insights/refresh", insightHandler.RefreshInsight)
