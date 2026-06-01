@@ -14,8 +14,11 @@ var amountRe = regexp.MustCompile(`^[\d\s\p{Z}+-]+,\d{2}`)
 
 // kaspiCategories is the limited pool of operation types used by Kaspi Bank
 var kaspiCategories = []string{
-	"Пополнение", "Перевод", "Покупка", "Снятие", "Вознаграждение", "Комиссия",
+	"Пополнение", "Перевод", "Покупка", "Снятие", "Вознаграждение", "Комиссия", "Разное",
 }
+
+// currencyNoteRe matches foreign currency notes like "(- 5,80 USD)" or "(+ 12,34 EUR)"
+var currencyNoteRe = regexp.MustCompile(`^\([-+\s\d,.]+(USD|EUR|RUB|KZT|GBP|CHF|JPY|CNY)\)$`)
 
 // systemExactMatches are table header labels to skip
 var systemExactMatches = []string{
@@ -29,6 +32,9 @@ var systemSubstrings = []string{
 	"www.kaspi.kz",
 	"сумма заблокирована",
 	"ожидает подтверждения",
+	"приложение к справке",
+	"раздел «краткое содержание",
+	"содержит информацию об операциях",
 }
 
 // IsDate checks whether the line is a Kaspi date (DD.MM.YY)
@@ -94,4 +100,22 @@ func ParseAmount(s string) float64 {
 		return 0
 	}
 	return sign * val
+}
+
+// PII regex patterns
+var (
+	iinRe     = regexp.MustCompile(`\b\d{12}\b`)                          // ИИН (12 цифр)
+	cardRe    = regexp.MustCompile(`\b\d{4}[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{4}\b`) // Номер карты
+	phoneRe   = regexp.MustCompile(`(\+?7|8)[\s\-]?\(?\d{3}\)?[\s\-]?\d{3}[\s\-]?\d{2}[\s\-]?\d{2}`) // Телефон
+	ibanRe    = regexp.MustCompile(`\b[A-Z]{2}\d{2}[A-Z0-9]{4,30}\b`)    // IBAN / номер счёта
+)
+
+// SanitizePII removes personally identifiable information from text.
+// Strips: IIN, card numbers, phone numbers, IBAN/account numbers.
+func SanitizePII(text string) string {
+	text = iinRe.ReplaceAllString(text, "***")
+	text = cardRe.ReplaceAllString(text, "****")
+	text = phoneRe.ReplaceAllString(text, "***")
+	text = ibanRe.ReplaceAllString(text, "***")
+	return strings.TrimSpace(text)
 }

@@ -31,11 +31,11 @@ type incomeExpenseModel struct {
 	Expenses float64
 }
 
-type categoryStatsModel struct {
-	Category string
-	Amount   float64
-	Count    int64
-}
+// type categoryStatsModel struct {
+// 	Category string
+// 	Amount   float64
+// 	Count    int64
+// }
 
 func toBalanceDomain(m *balanceModel) *domain.Balance {
 	return &domain.Balance{
@@ -46,13 +46,13 @@ func toBalanceDomain(m *balanceModel) *domain.Balance {
 	}
 }
 
-func toCategoryDomain(m *categoryStatsModel) *domain.CategoryStats {
-	return &domain.CategoryStats{
-		Category: m.Category,
-		Amount:   m.Amount,
-		Count:    int(m.Count),
-	}
-}
+// func toCategoryDomain(m *categoryStatsModel) *domain.CategoryStats {
+// 	return &domain.CategoryStats{
+// 		Category: m.Category,
+// 		Amount:   m.Amount,
+// 		Count:    int(m.Count),
+// 	}
+// }
 
 func (r *StatisticsRepo) GetBalance(ctx context.Context, userID uuid.UUID) (*domain.Balance, error) {
 	var result balanceModel

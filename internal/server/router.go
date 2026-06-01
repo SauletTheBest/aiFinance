@@ -1,14 +1,22 @@
 package server
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/handler"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/middleware"
 	"github.com/SauletTheBest/BackendFinancialApplication/pkg/jwt"
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 )
 
-func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHandler, transactionHandler *handler.TransactionHandler, statisticsHandler *handler.StatisticsHandler, parserHandler *handler.ParserHandler, jwtSvc *jwt.Service) *gin.Engine {
+func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHandler, transactionHandler *handler.TransactionHandler, statisticsHandler *handler.StatisticsHandler, parserHandler *handler.ParserHandler, goalHandler *handler.GoalHandler, chatHandler *handler.ChatHandler, insightHandler *handler.InsightHandler, jwtSvc *jwt.Service) *gin.Engine {
 	router := gin.Default()
+
+	config := cors.DefaultConfig()
+	config.AllowAllOrigins = true // Great for development! In deployment phase need to change.
+	config.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization", "Accept"}
+	config.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
+
+	router.Use(cors.New(config))
 
 	// Health check
 	router.GET("/api/health", func(c *gin.Context) {
@@ -22,6 +30,10 @@ func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHand
 	{
 		auth.POST("/register", authHandler.Register)
 		auth.POST("/login", authHandler.Login)
+		auth.POST("/forgot-password", authHandler.ForgotPassword)
+		auth.POST("/reset-password", authHandler.ResetPassword)
+		auth.POST("/verify-email", authHandler.VerifyEmail)
+		auth.POST("/resend-code", authHandler.ResendVerificationCode)
 	}
 
 	// Protected routes
@@ -36,15 +48,28 @@ func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHand
 		protected.GET("/transactions/:id", transactionHandler.GetTransaction)
 		protected.GET("/transactions", transactionHandler.GetUserTransactions)
 		protected.PUT("/transactions/:id", transactionHandler.UpdateTransaction)
+		protected.DELETE("/transactions", transactionHandler.DeleteUserTransactions)
 		protected.DELETE("/transactions/:id", transactionHandler.DeleteTransaction)
 
 		// Statement upload
 		protected.POST("/statements/upload", parserHandler.UploadStatement)
 
-	
 		protected.GET("/statistics/balance", statisticsHandler.GetBalance)
 		protected.PUT("/statistics/balance", statisticsHandler.UpdateBalance)
 		protected.GET("/statistics", statisticsHandler.GetStatistics)
+
+		protected.POST("/goals", goalHandler.CreateGoal)
+		protected.GET("/goals", goalHandler.GetGoals)
+		protected.PUT("/goals/:id/contribute", goalHandler.AddProgress)
+		protected.GET("/goals/:id", goalHandler.GetGoal)
+		protected.PATCH("/goals/:id", goalHandler.UpdateGoal)
+		protected.DELETE("/goals/:id", goalHandler.DeleteGoal)
+
+		protected.POST("/ai/chat", chatHandler.Chat)
+
+		protected.GET("/insights", insightHandler.GetInsights)
+		protected.POST("/insights/refresh", insightHandler.RefreshInsight)
+
 	}
 
 	return router

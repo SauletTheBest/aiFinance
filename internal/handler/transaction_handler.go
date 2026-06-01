@@ -11,7 +11,6 @@ import (
 	"strconv"
 )
 
-
 type TransactionHandler struct {
 	TransactionUsecase *usecase.TransactionUsecase
 }
@@ -23,7 +22,7 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-	
+
 	userID, err := uuid.Parse(userIDStr.(string))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
@@ -36,8 +35,8 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 		return
 	}
 
-	// Validate request												
-	if validationErrors := validator.ValidateTransaction(req.Amount, req.Description, req.Category, req.Type, req.CreatedAt); len(validationErrors) > 0 { //валидация для времени? 
+	// Validate request
+	if validationErrors := validator.ValidateTransaction(req.Amount, req.Description, req.Category, req.Type, req.CreatedAt); len(validationErrors) > 0 { //валидация для времени?
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "validation failed",
 			"details": validationErrors,
@@ -71,7 +70,7 @@ func (h *TransactionHandler) GetTransaction(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-	
+
 	userID, err := uuid.Parse(userIDStr.(string))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
@@ -117,17 +116,17 @@ func (h *TransactionHandler) GetUserTransactions(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-	
+
 	userID, err := uuid.Parse(userIDStr.(string))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
 
-	// Pagination parameters maybe need in future 
+	// Pagination parameters maybe need in future
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
-	
+
 	if page < 1 {
 		page = 1
 	}
@@ -159,7 +158,7 @@ func (h *TransactionHandler) GetUserTransactions(c *gin.Context) {
 			Description: transaction.Description,
 			Category:    transaction.Category,
 			Status:      string(transaction.Status),
-			Type: 		 string(transaction.Type),
+			Type:        string(transaction.Type),
 			CreatedAt:   transaction.CreatedAt,
 		})
 	}
@@ -179,7 +178,7 @@ func (h *TransactionHandler) UpdateTransaction(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-	
+
 	userID, err := uuid.Parse(userIDStr.(string))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
@@ -237,7 +236,7 @@ func (h *TransactionHandler) DeleteTransaction(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-	
+
 	userID, err := uuid.Parse(userIDStr.(string))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
@@ -272,4 +271,27 @@ func (h *TransactionHandler) DeleteTransaction(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Transaction deleted successfully"})
 }
 
+func (h *TransactionHandler) DeleteUserTransactions(c *gin.Context) {
+	userIDStr, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
 
+	userID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	count, err := h.TransactionUsecase.DeleteUserTransactions(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Transactions deleted successfully",
+		"count":   count,
+	})
+}

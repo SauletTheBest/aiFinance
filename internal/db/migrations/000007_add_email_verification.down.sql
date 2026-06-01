@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS verification_codes;
+ALTER TABLE IF EXISTS users DROP COLUMN IF EXISTS is_verified;

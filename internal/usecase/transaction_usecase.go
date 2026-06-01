@@ -1,14 +1,12 @@
 package usecase
 
-
 import (
 	"context"
-	"github.com/google/uuid"
-	"github.com/SauletTheBest/BackendFinancialApplication/internal/repository"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/domain"
+	"github.com/SauletTheBest/BackendFinancialApplication/internal/repository"
+	"github.com/google/uuid"
 	"time"
 )
-
 
 type TransactionUsecase struct {
 	transactionRepo repository.TransactionRepository
@@ -21,7 +19,6 @@ func NewTransactionUsecase(transactionRepo repository.TransactionRepository, use
 		userRepo:        userRepo,
 	}
 }
-
 
 // CreateTransaction - Create a new transaction for a user
 func (uc *TransactionUsecase) CreateTransaction(ctx context.Context, userID uuid.UUID, amount float64, description string, category string, transactionType string, createdAt time.Time) (*domain.Transaction, error) {
@@ -46,7 +43,7 @@ func (uc *TransactionUsecase) CreateTransaction(ctx context.Context, userID uuid
 		Amount:      amount,
 		Description: description,
 		Category:    category,
-		Type:  		 domain.TransactionType(transactionType),
+		Type:        domain.TransactionType(transactionType),
 		Status:      status,
 		CreatedAt:   createdAt,
 	}
@@ -85,8 +82,8 @@ func (uc *TransactionUsecase) UpdateTransaction(ctx context.Context, id uuid.UUI
 	}
 
 	if !createdAt.IsZero() {
-        transaction.CreatedAt = createdAt
-    }
+		transaction.CreatedAt = createdAt
+	}
 
 	return uc.transactionRepo.Update(ctx, transaction)
 }
@@ -94,4 +91,13 @@ func (uc *TransactionUsecase) UpdateTransaction(ctx context.Context, id uuid.UUI
 // DeleteTransaction - Delete a transaction
 func (uc *TransactionUsecase) DeleteTransaction(ctx context.Context, id uuid.UUID) error {
 	return uc.transactionRepo.Delete(ctx, id)
+}
+
+func (uc *TransactionUsecase) DeleteUserTransactions(ctx context.Context, userID uuid.UUID) (int64, error) {
+	_, err := uc.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return 0, err
+	}
+
+	return uc.transactionRepo.DeleteByUserID(ctx, userID)
 }

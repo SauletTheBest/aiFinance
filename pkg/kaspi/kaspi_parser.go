@@ -82,6 +82,16 @@ func extractTransactions(lines []string) ([]RawTransaction, error) {
 			continue
 		}
 
+		// Skip foreign currency notes like "(- 5,80 USD)" — these are annotations, not transactions
+		if currencyNoteRe.MatchString(line) {
+			continue
+		}
+
+		// Skip standalone plus signs or currency symbols
+		if line == "+" || line == "₸" || line == "T" {
+			continue
+		}
+
 		// Route each line into the appropriate column bucket
 		switch {
 		case IsDate(line):

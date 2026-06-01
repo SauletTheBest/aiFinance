@@ -1,13 +1,12 @@
 package postgres
 
-
 import (
-	"gorm.io/gorm"
-	"time"
+	"context"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/domain"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/repository"
 	"github.com/google/uuid"
-	"context"
+	"gorm.io/gorm"
+	"time"
 )
 
 type TransactionRepo struct {
@@ -15,39 +14,39 @@ type TransactionRepo struct {
 }
 
 type Transaction struct {
-	ID 			uuid.UUID `gorm:"type:uuid;primaryKey"`
-	UserID 		uuid.UUID `gorm:"type:uuid;index"`
-	Amount 		float64
+	ID          uuid.UUID `gorm:"type:uuid;primaryKey"`
+	UserID      uuid.UUID `gorm:"type:uuid;index"`
+	Amount      float64
 	Description string
-	Category 	string
-	Type		domain.TransactionType `gorm:"type:varchar(10)"`
-	Status 		domain.TransactionStatus
-	CreatedAt 	time.Time
+	Category    string
+	Type        domain.TransactionType `gorm:"type:varchar(10)"`
+	Status      domain.TransactionStatus
+	CreatedAt   time.Time
 }
 
 func transactionToDomain(model *Transaction) *domain.Transaction {
 	return &domain.Transaction{
-		ID: 			model.ID,
-		UserID: 		model.UserID,
-		Amount: 		model.Amount,
-		Description:	model.Description,
-		Category: 		model.Category,
-		Type:			model.Type,
-		Status: 		model.Status,
-		CreatedAt: 		model.CreatedAt,
+		ID:          model.ID,
+		UserID:      model.UserID,
+		Amount:      model.Amount,
+		Description: model.Description,
+		Category:    model.Category,
+		Type:        model.Type,
+		Status:      model.Status,
+		CreatedAt:   model.CreatedAt,
 	}
 }
 
 func transactionToModel(transaction *domain.Transaction) *Transaction {
 	return &Transaction{
-		ID: 			transaction.ID,
-		UserID: 		transaction.UserID,
-		Amount: 		transaction.Amount,
-		Description:	transaction.Description,
-		Category: 		transaction.Category,
-		Type:			transaction.Type,
-		Status: 		transaction.Status,
-		CreatedAt: 		transaction.CreatedAt,
+		ID:          transaction.ID,
+		UserID:      transaction.UserID,
+		Amount:      transaction.Amount,
+		Description: transaction.Description,
+		Category:    transaction.Category,
+		Type:        transaction.Type,
+		Status:      transaction.Status,
+		CreatedAt:   transaction.CreatedAt,
 	}
 }
 
@@ -59,8 +58,6 @@ func (r *TransactionRepo) Create(ctx context.Context, transaction *domain.Transa
 	model := transactionToModel(transaction)
 	return r.db.WithContext(ctx).Create(model).Error
 }
-
-
 
 func (r *TransactionRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Transaction, error) {
 	var model Transaction
@@ -74,27 +71,32 @@ func (r *TransactionRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Tr
 }
 
 func (r *TransactionRepo) GetByUserID(ctx context.Context, userID uuid.UUID) ([]*domain.Transaction, error) {
-    var models []Transaction
-    err := r.db.WithContext(ctx).
-        Where("user_id = ?", userID).
-        Order("created_at DESC").
-        Find(&models).Error
-    if err != nil {
-        return nil, err
-    }
-    
-    transactions := make([]*domain.Transaction, len(models))
-    for i, model := range models {
-        transactions[i] = transactionToDomain(&model)
-    }
-    return transactions, nil
+	var models []Transaction
+	err := r.db.WithContext(ctx).
+		Where("user_id = ?", userID).
+		Order("created_at DESC").
+		Find(&models).Error
+	if err != nil {
+		return nil, err
+	}
+
+	transactions := make([]*domain.Transaction, len(models))
+	for i, model := range models {
+		transactions[i] = transactionToDomain(&model)
+	}
+	return transactions, nil
 }
-func (r *TransactionRepo) Update(ctx context.Context, transaction *domain.Transaction) error{
+func (r *TransactionRepo) Update(ctx context.Context, transaction *domain.Transaction) error {
 	model := transactionToModel(transaction)
-    return r.db.WithContext(ctx).Save(model).Error
+	return r.db.WithContext(ctx).Save(model).Error
 }
 func (r *TransactionRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&Transaction{}).Error
+}
+
+func (r *TransactionRepo) DeleteByUserID(ctx context.Context, userID uuid.UUID) (int64, error) {
+	result := r.db.WithContext(ctx).Where("user_id = ?", userID).Delete(&Transaction{})
+	return result.RowsAffected, result.Error
 }
 
 // GetByStatus returns transactions filtered by status, limited to `limit` rows.

@@ -69,7 +69,7 @@ func mapToDomain(userID uuid.UUID, raw kaspi.RawTransaction) *domain.Transaction
 		ID:          uuid.New(),
 		UserID:      userID,
 		Amount:      amount,
-		Description: raw.Description,
+		Description: kaspi.SanitizePII(raw.Description),
 		Category:    raw.Category,
 		Type:        tType,
 		Status:      domain.StatusPending,

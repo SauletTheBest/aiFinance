@@ -1,14 +1,13 @@
 package postgres
 
 import (
-	"github.com/SauletTheBest/BackendFinancialApplication/internal/repository"
-	"github.com/SauletTheBest/BackendFinancialApplication/internal/domain"
 	"context"
-	"gorm.io/gorm"
+	"github.com/SauletTheBest/BackendFinancialApplication/internal/domain"
+	"github.com/SauletTheBest/BackendFinancialApplication/internal/repository"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 	"time"
 )
-
 
 type UserRepo struct {
 	db *gorm.DB
@@ -16,10 +15,11 @@ type UserRepo struct {
 type User struct {
 	ID           uuid.UUID `gorm:"type:uuid;primaryKey"`
 	Name         string
-	Email        string    `gorm:"uniqueIndex"`
+	Email        string `gorm:"uniqueIndex"`
 	PasswordHash string
-	Currency     string    `gorm:"type:varchar(3);not null;default:'KZT'"`
-	BaseBalance  float64   `gorm:"not null;default:0"`
+	Currency     string  `gorm:"type:varchar(3);not null;default:'KZT'"`
+	BaseBalance  float64 `gorm:"not null;default:0"`
+	IsVerified   bool
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }
@@ -32,6 +32,7 @@ func usertoDomain(model *User) *domain.User {
 		PasswordHash: model.PasswordHash,
 		Currency:     model.Currency,
 		BaseBalance:  model.BaseBalance,
+		IsVerified:   model.IsVerified,
 		CreatedAt:    model.CreatedAt,
 		UpdatedAt:    model.UpdatedAt,
 	}
@@ -45,13 +46,14 @@ func toModel(user *domain.User) *User {
 		PasswordHash: user.PasswordHash,
 		Currency:     user.Currency,
 		BaseBalance:  user.BaseBalance,
+		IsVerified:   user.IsVerified,
 		CreatedAt:    user.CreatedAt,
 		UpdatedAt:    user.UpdatedAt,
 	}
 }
 
 func NewUserRepo(db *gorm.DB) repository.UserRepository {
-	return &UserRepo{db: db }
+	return &UserRepo{db: db}
 }
 
 func (r *UserRepo) Create(ctx context.Context, user *domain.User) error {
@@ -62,18 +64,18 @@ func (r *UserRepo) Create(ctx context.Context, user *domain.User) error {
 func (r *UserRepo) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
 	var model User
 
-	err := r.db.WithContext(ctx).Where("email = ?", email).First(&model).Error 
+	err := r.db.WithContext(ctx).Where("email = ?", email).First(&model).Error
 
 	if err != nil {
-		return  nil, err
+		return nil, err
 	}
 
 	return usertoDomain(&model), nil
 }
 
 func (r *UserRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
-	
-	var model User 
+
+	var model User
 	err := r.db.WithContext(ctx).Where("id = ?", id).First(&model).Error
 
 	if err != nil {
@@ -82,6 +84,13 @@ func (r *UserRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, err
 
 	return usertoDomain(&model), nil
 }
+
+func (r *UserRepo) ListIDs(ctx context.Context) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
+	err := r.db.WithContext(ctx).Model(&User{}).Pluck("id", &ids).Error
+	return ids, err
+}
+
 func (r *UserRepo) Update(ctx context.Context, user *domain.User) error {
 	model := toModel(user)
 	return r.db.WithContext(ctx).Save(model).Error
@@ -92,7 +101,7 @@ func (r *UserRepo) UpdateProfile(ctx context.Context, userID uuid.UUID, name, cu
 	if err != nil || user == nil {
 		return err
 	}
-	
+
 	// Update fields if provided
 	if name != "" {
 		user.Name = name
