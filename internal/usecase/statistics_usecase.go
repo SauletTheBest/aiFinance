@@ -29,16 +29,18 @@ func NewStatisticsUsecase(
 }
 
 func (uc *StatisticsUsecase) GetBalance(ctx context.Context, userID uuid.UUID) (*domain.Balance, error) {
-	balance, err := uc.statisticsRepo.GetBalance(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-
 	user, err := uc.userRepo.GetByID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
+	balance, err := uc.statisticsRepo.GetBalance(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Actual balance = user's opening offset + net flow from all transactions
+	balance.Total = user.BaseBalance + balance.Total
 	balance.Currency = user.Currency
 
 	return balance, nil
@@ -85,14 +87,18 @@ func (uc *StatisticsUsecase) GetStatistics(
 
 	}
 
+	// Actual balance = user's opening offset + net flow from all transactions (all-time)
+	balance.Total = user.BaseBalance + balance.Total
 	balance.Currency = user.Currency
+
+	netFlow := income - expenses
 	stats := &domain.Statistics{
 		Balance:           *balance,
 		Income:            income,
 		Expenses:          expenses,
-		NetFlow:           income - expenses,
+		NetFlow:           netFlow,
 		ExpenseCategories: expenseCategories,
-		IncomeCategories:  incomeCategories,  
+		IncomeCategories:  incomeCategories,
 	}
 
 	if periodStart != nil {
@@ -103,4 +109,21 @@ func (uc *StatisticsUsecase) GetStatistics(
 	}
 
 	return stats, nil
+}
+
+// UpdateBalance lets the user set their real-world total balance.
+// It calculates the required opening offset so that:
+//
+//	user.BaseBalance + netFlow == newTotalBalance
+func (uc *StatisticsUsecase) UpdateBalance(ctx context.Context, userID uuid.UUID, newTotalBalance float64) error {
+	// Fetch current net flow (income - expenses) across all time
+	netFlow, err := uc.statisticsRepo.GetBalance(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	// Reverse-calculate the opening offset needed to hit the target balance
+	newBaseBalance := newTotalBalance - netFlow.Total
+
+	return uc.userRepo.UpdateBaseBalance(ctx, userID, newBaseBalance)
 }

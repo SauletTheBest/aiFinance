@@ -33,7 +33,7 @@ func (uc *UserUseCase) UpdateProfile(ctx context.Context, userID uuid.UUID, name
     if currency != "" {
         user.Currency = currency
     }
-    user.UpdatedAt = time.Now() // Set to time.Now() in real code
+    user.UpdatedAt = time.Now() 
     
     return uc.userRepo.Update(ctx, user)
 }

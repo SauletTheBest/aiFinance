@@ -1,14 +1,12 @@
 package usecase
 
-
 import (
 	"context"
-	"github.com/google/uuid"
-	"github.com/SauletTheBest/BackendFinancialApplication/internal/repository"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/domain"
+	"github.com/SauletTheBest/BackendFinancialApplication/internal/repository"
+	"github.com/google/uuid"
 	"time"
 )
-
 
 type TransactionUsecase struct {
 	transactionRepo repository.TransactionRepository
@@ -34,14 +32,19 @@ func (uc *TransactionUsecase) CreateTransaction(ctx context.Context, userID uuid
 		createdAt = time.Now()
 	}
 
+	status := domain.StatusPending
+	if category != "" {
+		status = domain.StatusCategorized
+	}
+
 	transaction := &domain.Transaction{
 		ID:          uuid.New(),
 		UserID:      userID,
 		Amount:      amount,
 		Description: description,
-		Category:    category,  // " " Will be set by AI service but i maked manually maybe will change to ""
-		Type:  		 domain.TransactionType(transactionType),
-		Status:      domain.StatusPending,
+		Category:    category,
+		Type:        domain.TransactionType(transactionType),
+		Status:      status,
 		CreatedAt:   createdAt,
 	}
 
@@ -74,9 +77,13 @@ func (uc *TransactionUsecase) UpdateTransaction(ctx context.Context, id uuid.UUI
 	transaction.Description = description
 	transaction.Category = category
 
+	if category != "" {
+		transaction.Status = domain.StatusCategorized
+	}
+
 	if !createdAt.IsZero() {
-        transaction.CreatedAt = createdAt
-    }
+		transaction.CreatedAt = createdAt
+	}
 
 	return uc.transactionRepo.Update(ctx, transaction)
 }
@@ -84,4 +91,13 @@ func (uc *TransactionUsecase) UpdateTransaction(ctx context.Context, id uuid.UUI
 // DeleteTransaction - Delete a transaction
 func (uc *TransactionUsecase) DeleteTransaction(ctx context.Context, id uuid.UUID) error {
 	return uc.transactionRepo.Delete(ctx, id)
+}
+
+func (uc *TransactionUsecase) DeleteUserTransactions(ctx context.Context, userID uuid.UUID) (int64, error) {
+	_, err := uc.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return 0, err
+	}
+
+	return uc.transactionRepo.DeleteByUserID(ctx, userID)
 }
