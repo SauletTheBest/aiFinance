@@ -95,3 +95,7 @@ func (uc *TransactionUsecase) UpdateTransaction(ctx context.Context, id uuid.UUI
 func (uc *TransactionUsecase) DeleteTransaction(ctx context.Context, id uuid.UUID) error {
 	return uc.transactionRepo.Delete(ctx, id)
 }
+// DeleteAllByUserID - Delete all transactions for a user
+func (uc *TransactionUsecase) DeleteAllByUserID(ctx context.Context, userID uuid.UUID) error {
+	return uc.transactionRepo.DeleteAllByUserID(ctx, userID)
+}

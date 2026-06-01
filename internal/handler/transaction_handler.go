@@ -272,4 +272,25 @@ func (h *TransactionHandler) DeleteTransaction(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Transaction deleted successfully"})
 }
 
+func (h *TransactionHandler) DeleteAllByUserID(c *gin.Context) {
+	// Get user ID from JWT token
+	userIDStr, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	
+	userID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
 
+	err = h.TransactionUsecase.DeleteAllByUserID(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "All transactions deleted successfully"})
+}	
