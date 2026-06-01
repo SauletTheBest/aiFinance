@@ -286,11 +286,14 @@ func (h *TransactionHandler) DeleteAllByUserID(c *gin.Context) {
 		return
 	}
 
-	err = h.TransactionUsecase.DeleteAllByUserID(c.Request.Context(), userID)
+	count, err := h.TransactionUsecase.DeleteAllByUserID(c.Request.Context(), userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "All transactions deleted successfully"})
+	c.JSON(http.StatusOK, gin.H{
+		"message": "All transactions deleted successfully",
+		"count": count,
+	})
 }	

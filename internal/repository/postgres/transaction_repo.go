@@ -116,6 +116,7 @@ func (r *TransactionRepo) GetByStatus(ctx context.Context, status domain.Transac
 	return transactions, nil
 }
 
-func (r *TransactionRepo) DeleteAllByUserID(ctx context.Context, userID uuid.UUID) error {
-	return r.db.WithContext(ctx).Where("user_id = ?", userID).Delete(&Transaction{}).Error
+func (r *TransactionRepo) DeleteAllByUserID(ctx context.Context, userID uuid.UUID) (int64, error) {
+	db := r.db.WithContext(ctx).Where("user_id = ?", userID).Delete(&Transaction{})
+	return db.RowsAffected, db.Error
 }

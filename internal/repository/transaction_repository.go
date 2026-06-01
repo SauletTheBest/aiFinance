@@ -13,5 +13,5 @@ type TransactionRepository interface {
     GetByStatus(ctx context.Context, status domain.TransactionStatus, limit int) ([]*domain.Transaction, error)
     Update(ctx context.Context, transaction *domain.Transaction) error
     Delete(ctx context.Context, id uuid.UUID) error
-    DeleteAllByUserID(ctx context.Context, userID uuid.UUID) error
+    DeleteAllByUserID(ctx context.Context, userID uuid.UUID) (int64, error)
 }
