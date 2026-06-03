@@ -297,3 +297,29 @@ func (h *TransactionHandler) DeleteAllByUserID(c *gin.Context) {
 		"count": count,
 	})
 }	
+
+// Функция, которая обрабатывает HTTP-запрос от Flutter
+func (h *TransactionHandler) GetWorkingCount(c *gin.Context) {
+	// Достаем ID юзера из токена (стандартно, как во всех твоих хэндлерах)
+	userIDStr, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	
+	userID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	// Спрашиваем UseCase
+	count, err := h.TransactionUsecase.GetWorkingCount(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Возвращаем красивый JSON: {"working_count": 5}
+	c.JSON(http.StatusOK, gin.H{"working_count": count})
+}

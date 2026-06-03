@@ -14,4 +14,6 @@ type TransactionRepository interface {
     Update(ctx context.Context, transaction *domain.Transaction) error
     Delete(ctx context.Context, id uuid.UUID) error
     DeleteAllByUserID(ctx context.Context, userID uuid.UUID) (int64, error)
+
+    CountByStatus(ctx context.Context, userID uuid.UUID, status domain.TransactionStatus) (int, error)
 }

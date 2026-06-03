@@ -120,3 +120,12 @@ func (r *TransactionRepo) DeleteAllByUserID(ctx context.Context, userID uuid.UUI
 	db := r.db.WithContext(ctx).Where("user_id = ?", userID).Delete(&Transaction{})
 	return db.RowsAffected, db.Error
 }
+
+func (r *TransactionRepo) CountByStatus(ctx context.Context, userID uuid.UUID, status domain.TransactionStatus) (int, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&Transaction{}).Where("user_id = ? AND status = ?", userID, status).Count(&count).Error
+	if err != nil {
+		return 0, err
+	}
+	return int(count), nil
+}

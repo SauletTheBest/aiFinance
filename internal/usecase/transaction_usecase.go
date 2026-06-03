@@ -103,3 +103,18 @@ func (uc *TransactionUsecase) DeleteAllByUserID(ctx context.Context, userID uuid
 	}
 	return uc.transactionRepo.DeleteAllByUserID(ctx, userID)
 }
+
+
+func (u *TransactionUsecase) GetWorkingCount(ctx context.Context, userID uuid.UUID) (int, error) {
+	pending, err := u.transactionRepo.CountByStatus(ctx, userID, domain.StatusPending)
+	if err != nil {
+		return 0, err
+	}
+	
+	processing, err := u.transactionRepo.CountByStatus(ctx, userID, domain.StatusProcessing)
+	if err != nil {
+		return 0, err
+	}
+	
+	return pending + processing, nil
+}

@@ -53,6 +53,8 @@ func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHand
 		protected.DELETE("/transactions/:id", transactionHandler.DeleteTransaction)
 		protected.DELETE("/transactions", transactionHandler.DeleteAllByUserID)
 
+		protected.GET("/working-count", transactionHandler.GetWorkingCount)
+
 		// Statement upload
 		protected.POST("/statements/upload", parserHandler.UploadStatement)
 
