@@ -1,7 +1,7 @@
 package dto
 
 
-type RegisterRequest struct { //basically two rows but i can extend in the future
+type RegisterRequest struct { 
 	Name string `json:"name"`
 	Email string `json:"email"`
 	Password string `json:"password"`
@@ -33,4 +33,8 @@ type ResetPasswordRequest struct {
 
 type ResendCodeRequest struct {
 	Email string `json:"email" binding:"required,email"`
+}
+
+type GoogleLoginRequest struct{
+	IDToken string `json:"id_token" binding:"required"`
 }

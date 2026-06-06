@@ -17,6 +17,7 @@ import (
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/server"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/usecase"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/worker"
+	"github.com/SauletTheBest/BackendFinancialApplication/pkg/google"
 	"github.com/SauletTheBest/BackendFinancialApplication/pkg/jwt"
 	"github.com/gin-gonic/gin"
 )
@@ -55,7 +56,9 @@ func NewApp(cfg *config.Config) *App {
 
 	emailSvc := email.NewEmailService(cfg.GmailClientID, cfg.GmailClientSecret, cfg.GmailRefreshToken, cfg.GmailSender)
 
-	authUsecase := usecase.NewAuthUsecase(userRepo, jwtSvc, verificationRepo, emailSvc)
+	googleVerifier := google.NewVerifier(cfg.GmailClientID)
+
+	authUsecase := usecase.NewAuthUsecase(userRepo, jwtSvc, verificationRepo, emailSvc, googleVerifier)
 	userUsecase := usecase.NewUserUseCase(userRepo)
 	statisticsUsecase := usecase.NewStatisticsUsecase(statisticsRepo, transactionRepo, userRepo)
 	transactionUsecase := usecase.NewTransactionUsecase(transactionRepo, userRepo)

@@ -36,6 +36,8 @@ func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHand
         auth.POST("/reset-password", authHandler.ResetPassword)
 		auth.POST("/verify-email", authHandler.VerifyEmail)
 		auth.POST("/resend-code", authHandler.ResendVerificationCode)
+
+		auth.POST("/google", authHandler.GoogleLogin)
 	}
 
 	// Protected routes

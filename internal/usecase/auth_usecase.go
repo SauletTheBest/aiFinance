@@ -13,24 +13,32 @@ import (
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/domain" //? do we really need that?
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/email"
 )
+ 
+type OAuthVerifier interface {
+	VerifyToken(ctx context.Context, token string) (email string, name string, err error)
+}
 
 type AuthUsecase struct {
-	userRepo  repository.UserRepository	
-	jwtSvc *jwt.Service
+	userRepo  		 repository.UserRepository	
+	jwtSvc 			 *jwt.Service
 	verificationRepo repository.VerificationRepository 
-	emailService     *email.EmailService              
+	emailService     *email.EmailService    
+	oauthVerifier    OAuthVerifier    
 }
+
 
 func NewAuthUsecase(
 	userRepo repository.UserRepository, jwtSvc *jwt.Service,
 	verificationRepo repository.VerificationRepository,
 	emailService *email.EmailService,
+	oauthVerifier OAuthVerifier,
 	) *AuthUsecase {
 	return &AuthUsecase{
 		userRepo: userRepo,
 		jwtSvc: jwtSvc,
 		verificationRepo: verificationRepo,
 		emailService:     emailService,
+		oauthVerifier: 	  oauthVerifier,
 	}
 }
 
@@ -268,4 +276,42 @@ func (u *AuthUsecase) ResendVerificationCode(ctx context.Context, email string) 
 	}()
 
 	return nil
+}
+
+func (u *AuthUsecase) LoginWithGoogle(ctx context.Context, idToken string) (string, error) {
+	// 1. Verify token & retrieve user details using our decoupled interface
+	email, name, err := u.oauthVerifier.VerifyToken(ctx, idToken)
+	if err != nil {
+		return "", err
+	}
+	// 2. Fetch user
+	user, err := u.userRepo.GetByEmail(ctx, email)
+	if err != nil {
+		// If user doesn't exist, register them automatically
+		if err.Error() == "record not found" {
+			user = &domain.User{
+				ID:           uuid.New(),
+				Name:         name,
+				Email:        email,
+				PasswordHash: "", // OAuth2 user has no password hash
+				Currency:     "KZT",
+				BaseBalance:  0,
+				IsVerified:   true, // Already validated via Google OAuth
+				CreatedAt:    time.Now(),
+				UpdatedAt:    time.Now(),
+			}
+			err = u.userRepo.Create(ctx, user)
+			if err != nil {
+				return "", fmt.Errorf("failed to register user: %w", err)
+			}
+		} else {
+			return "", fmt.Errorf("database lookup error: %w", err)
+		}
+	}
+	// 3. Generate session JWT
+	token, err := u.jwtSvc.GenerateToken(user.ID.String())
+	if err != nil {
+		return "", fmt.Errorf("session token generation failed: %w", err)
+	}
+	return token, nil
 }

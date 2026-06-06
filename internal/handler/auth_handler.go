@@ -15,7 +15,6 @@ type AuthHandler struct {
 
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req dto.RegisterRequest
-
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
@@ -47,9 +46,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 
 func (h *AuthHandler) Login(c *gin.Context) {
-
 	var req dto.LoginRequest
-
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "invalid request body",
@@ -70,7 +67,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	})
 }
 
-// POST /api/auth/verify-email
+
 func (h *AuthHandler) VerifyEmail(c *gin.Context) {
 	var req dto.VerifyEmailRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -91,7 +88,7 @@ func (h *AuthHandler) VerifyEmail(c *gin.Context) {
 	})
 }
 
-// POST /api/auth/forgot-password
+
 func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 	var req dto.ForgotPasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -100,13 +97,13 @@ func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 	}
 	err := h.AuthUsecase.ForgotPassword(c.Request.Context(), req.Email)
 	if err != nil {
-		// Even if it fails, we just say "If email exists, we sent it."
-		// This is a security best practice so hackers can't test which emails exist!
+		// Even if it fails, we just say If email exists, we sent it.
+		// This is a security best practice so hackers can't test which emails exist
 		fmt.Printf("Forgot password error: %v\n", err)
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "If an account with that email exists, a reset code has been sent."})
 }
-// POST /api/auth/reset-password
+
 func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	var req dto.ResetPasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -120,7 +117,7 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Password reset successfully! You can now log in."})
 }
-// POST /api/auth/resend-code
+
 func (h *AuthHandler) ResendVerificationCode(c *gin.Context) {
 	var req dto.ResendCodeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -136,5 +133,23 @@ func (h *AuthHandler) ResendVerificationCode(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "A new verification code has been sent successfully.",
+	})
+}
+
+func (h *AuthHandler) GoogleLogin(c *gin.Context) {
+	var req dto.GoogleLoginRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	token, err := h.AuthUsecase.LoginWithGoogle(c.Request.Context(), req.IDToken)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, dto.AuthResponse {
+		AccessToken: token,
 	})
 }
