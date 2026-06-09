@@ -9,11 +9,11 @@ import (
 )
 
 type Verifier struct {
-	clientID string
+	allowedClientIDs []string
 }
 
-func NewVerifier(clientID string) *Verifier {
-	return &Verifier{clientID: clientID}
+func NewVerifier(allowedClientIDs []string) *Verifier {
+	return &Verifier{allowedClientIDs: allowedClientIDs}
 }
 
 func (v *Verifier) VerifyToken(ctx context.Context, idToken string) (string, string, error) {
@@ -22,13 +22,25 @@ func (v *Verifier) VerifyToken(ctx context.Context, idToken string) (string, str
 	if err == nil {
 		if claims, ok := parsedToken.Claims.(jwt.MapClaims); ok {
 			fmt.Printf("\n[DEBUG] Incoming Google Token 'aud' claim is: %v\n", claims["aud"])
-			fmt.Printf("[DEBUG] Backend expected 'aud' claim is: %s\n\n", v.clientID)
+			fmt.Printf("[DEBUG] Backend expected 'aud' list: %v\n\n", v.allowedClientIDs)
 		}
 	}
-	//
-	payload, err := idtoken.Validate(ctx, idToken, v.clientID)
+	
+	payload, err := idtoken.Validate(ctx, idToken, "")
 	if err != nil {
 		return "", "", fmt.Errorf("token validation failed: %w", err)
+	}
+
+	isValidAudience := false
+	for _, id := range v.allowedClientIDs {
+		if payload.Audience == id {
+			isValidAudience = true
+			break
+		}
+	}
+
+	if !isValidAudience {
+		return "", "", fmt.Errorf("token validation failed: audience %s is not allowed", payload.Audience)
 	}
 
 	email, ok := payload.Claims["email"].(string)
@@ -37,7 +49,6 @@ func (v *Verifier) VerifyToken(ctx context.Context, idToken string) (string, str
 	}
 
 	name, _ := payload.Claims["name"].(string)
-
 
 	return email, name, nil
 }

@@ -56,7 +56,10 @@ func NewApp(cfg *config.Config) *App {
 
 	emailSvc := email.NewEmailService(cfg.GmailClientID, cfg.GmailClientSecret, cfg.GmailRefreshToken, cfg.GmailSender)
 
-	googleVerifier := google.NewVerifier(cfg.GoogleLoginClientID)
+	googleVerifier := google.NewVerifier([]string{
+		cfg.GoogleLoginClientID,
+		cfg.AndroidClientID,
+	})
 
 	authUsecase := usecase.NewAuthUsecase(userRepo, jwtSvc, verificationRepo, emailSvc, googleVerifier)
 	userUsecase := usecase.NewUserUseCase(userRepo)

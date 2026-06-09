@@ -20,6 +20,7 @@ type Config struct {
 	GmailRefreshToken string
 	GmailSender       string
 	GoogleLoginClientID string
+	AndroidClientID     string
 }
 
 func Load() *Config {
@@ -41,6 +42,7 @@ func Load() *Config {
 		GmailRefreshToken: getEnv("REFRESH_TOKEN", ""),
 		GmailSender:       getEnv("GMAIL_SENDER", ""),
 		GoogleLoginClientID: getEnv("CLIENT_ID", ""),
+		AndroidClientID: getEnv("ANDROID_CLIENT_ID",""),
 	}
 }
 
