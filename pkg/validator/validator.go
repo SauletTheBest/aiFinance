@@ -4,6 +4,7 @@ import (
 	"net/mail"
 	"regexp"
 	"time"
+	"unicode/utf8"
 )
 
 type ValidationError struct {
@@ -76,7 +77,7 @@ func ValidateTransaction(amount float64, description string, category string, tr
 	// category
 	if category == "" {
 		errors = append(errors, &ValidationError{Field: "category", Message: "category is required"})
-	} else if len(category) > 30 {
+	} else if utf8.RuneCountInString(category) > 30 {
 		errors = append(errors, &ValidationError{Field: "category", Message: "category must be less than 30 characters"})
 	}
 
@@ -119,11 +120,9 @@ func ValidateUpdateTransaction(amount *float64, description *string, category *s
 	//category
 	if category != nil && *category == "" {
 		errors = append(errors, &ValidationError{Field: "category", Message: "category cannot be empty"})
-	} else if category != nil && len(*category) > 30 {
+	} else if category != nil && utf8.RuneCountInString(*category) > 30 {
 		errors = append(errors, &ValidationError{Field: "category", Message: "category must be less than 30 characters"})
 	}
-
-	//type
 
 	//date
 	if createdAt != nil && !createdAt.IsZero() {
