@@ -44,7 +44,7 @@
         }
 
         // 2. Get current balance
-        balance, err := uc.statisticsRepo.GetBalance(ctx, userID)
+        balance, err := uc.statisticsRepo.GetNetFlow(ctx, userID)
         if err != nil {
             return "", fmt.Errorf("chat: get balance failed: %w", err)
         }

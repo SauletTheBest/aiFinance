@@ -67,7 +67,7 @@ func NewApp(cfg *config.Config) *App {
 	transactionUsecase := usecase.NewTransactionUsecase(transactionRepo, userRepo)
 	parserUsecase := usecase.NewParserUseCase(transactionRepo, userRepo)
 	goalUsecase := usecase.NewGoalUseCase(goalRepo)
-	insightUseCase := usecase.NewInsightUseCase(insightRepo, statisticsRepo, goalRepo, aiClient)
+	insightUseCase := usecase.NewInsightUseCase(insightRepo, statisticsRepo, goalRepo, userRepo, aiClient)
 
 	chatUsecase := usecase.NewChatUseCase(userRepo, goalRepo, statisticsRepo, aiClient)
 

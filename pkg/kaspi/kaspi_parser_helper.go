@@ -6,15 +6,27 @@ import (
 	"strings"
 )
 
-// dateRe matches Kaspi statement dates in DD.MM.YY format
+// dateRe matches Kaspi statement dates in DD.MM.YY format (strictly standalone)
 var dateRe = regexp.MustCompile(`^(\d{2}\.\d{2}\.\d{2})$`)
 
-// amountRe matches amounts, including misaligned minus signs (e.g. "18 - 850,00 T" or "0,00 T")
-var amountRe = regexp.MustCompile(`^[\d\s\p{Z}+-]+,\d{2}`)
+// Improved amountRe according to your suggestion
+var amountRe = regexp.MustCompile(`^[+-]?\s*\d[\d\s]*,\d{2}`)
 
-// kaspiCategories is the limited pool of operation types used by Kaspi Bank
+// Компилируем регулярное выражение ОДИН РАЗ на уровне пакета, чтобы ParseAmount не тормозил в цикле
+var amountDigitsRe = regexp.MustCompile(`[\d\s]+,\d{2}`)
+
+// Категории упорядочены от самых длинных/специфичных к самым коротким/общим!
 var kaspiCategories = []string{
-	"Пополнение", "Перевод", "Покупка", "Снятие", "Вознаграждение", "Комиссия",
+	"Поступление со своего счета",
+	"Поступление",
+	"Перевод на свой счет",
+	"Перевод на свой",
+	"Перевод",
+	"Пополнение",
+	"Покупка",
+	"Снятие",
+	"Вознаграждение",
+	"Комиссия",
 }
 
 // systemExactMatches are table header labels to skip
@@ -73,28 +85,24 @@ func IsSystemText(s string) bool {
 	return false
 }
 
-// ParseAmount extracts a float64 from a Kaspi amount string.
-// Handles misaligned minus signs (e.g. "18 - 850,00 ₸") and various currency symbols.
-// Negative values represent expenses, positive — income.
+// ParseAmount извлекает float64 из строки суммы Kaspi с помощью скомпилированной регулярки.
 func ParseAmount(s string) float64 {
-	sign := 1.0
-	if strings.Contains(s, "-") {
-		sign = -1.0
-	}
+	clean := strings.TrimSpace(s)
+	negative := strings.HasPrefix(clean, "-")
 
-	// Keep only digits and comma — strip currency symbols, spaces, letters
-	var builder strings.Builder
-	for _, r := range s {
-		if (r >= '0' && r <= '9') || r == ',' {
-			builder.WriteRune(r)
-		}
-	}
+	// Используем уже скомпилированную глобально регулярку
+	num := amountDigitsRe.FindString(clean)
 
-	cleanStr := strings.ReplaceAll(builder.String(), ",", ".")
+	num = strings.ReplaceAll(num, " ", "")
+	num = strings.ReplaceAll(num, ",", ".")
 
-	val, err := strconv.ParseFloat(cleanStr, 64)
+	val, err := strconv.ParseFloat(num, 64)
 	if err != nil {
 		return 0
 	}
-	return sign * val
+
+	if negative {
+		return -val
+	}
+	return val
 }

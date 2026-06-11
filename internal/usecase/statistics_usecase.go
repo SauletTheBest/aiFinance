@@ -34,14 +34,18 @@ func (uc *StatisticsUsecase) GetBalance(ctx context.Context, userID uuid.UUID) (
 		return nil, err
 	}
 
-	balance, err := uc.statisticsRepo.GetBalance(ctx, userID)
+	netFlow, err := uc.statisticsRepo.GetNetFlow(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Actual balance = user's opening offset + net flow from all transactions
-	balance.Total = user.BaseBalance + balance.Total
-	balance.Currency = user.Currency
+	balance := &domain.Balance{
+		UserID:    userID.String(),
+		Total:     user.BaseBalance + netFlow.Total,
+		Currency:  user.Currency,
+		UpdatedAt: netFlow.UpdatedAt,
+	}
 
 	return balance, nil
 }
@@ -57,7 +61,7 @@ func (uc *StatisticsUsecase) GetStatistics(
 		return nil, err
 	}
 
-	balance, err := uc.statisticsRepo.GetBalance(ctx, userID)
+	netFlow, err := uc.statisticsRepo.GetNetFlow(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -81,22 +85,21 @@ func (uc *StatisticsUsecase) GetStatistics(
 			expenseCategories = append(expenseCategories, category)
 		case "income":
 			incomeCategories = append(incomeCategories, category)
-		default:
-			//i can there throw error in future
 		}
-
 	}
 
-	// Actual balance = user's opening offset + net flow from all transactions (all-time)
-	balance.Total = user.BaseBalance + balance.Total
-	balance.Currency = user.Currency
+	actualBalance := domain.Balance{
+		UserID:    userID.String(),
+		Total:     user.BaseBalance + netFlow.Total,
+		Currency:  user.Currency,
+		UpdatedAt: netFlow.UpdatedAt,
+	}
 
-	netFlow := income - expenses
 	stats := &domain.Statistics{
-		Balance:           *balance,
+		Balance:           actualBalance,
 		Income:            income,
 		Expenses:          expenses,
-		NetFlow:           netFlow,
+		NetFlow:           income - expenses,
 		ExpenseCategories: expenseCategories,
 		IncomeCategories:  incomeCategories,
 	}
@@ -117,7 +120,7 @@ func (uc *StatisticsUsecase) GetStatistics(
 //	user.BaseBalance + netFlow == newTotalBalance
 func (uc *StatisticsUsecase) UpdateBalance(ctx context.Context, userID uuid.UUID, newTotalBalance float64) error {
 	// Fetch current net flow (income - expenses) across all time
-	netFlow, err := uc.statisticsRepo.GetBalance(ctx, userID)
+	netFlow, err := uc.statisticsRepo.GetNetFlow(ctx, userID)
 	if err != nil {
 		return err
 	}

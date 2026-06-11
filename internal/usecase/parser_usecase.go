@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/domain"
 	"github.com/SauletTheBest/BackendFinancialApplication/internal/repository"
@@ -30,15 +31,29 @@ func (uc *ParserUseCase) UploadStatement(ctx context.Context, userID uuid.UUID, 
 		return nil, err
 	}
 
+	// Очищаем старые транзакции пользователя перед импортом новых
+	_, err = uc.transactionRepo.DeleteAllByUserID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to clear old transactions: %w", err)
+	}
+
 	// Parse the PDF
-	rawTransactions, err := kaspi.ParsePDF(filePath)
+	statement, err := kaspi.ParsePDF(filePath)
 	if err != nil {
 		return nil, err
 	}
 
+	// Автоматически обновляем базовый баланс пользователя в базе данных!
+	if statement.StartingBalance != 0 {
+		err = uc.userRepo.UpdateBaseBalance(ctx, userID, statement.StartingBalance)
+		if err != nil {
+			return nil, fmt.Errorf("failed to update user base balance: %w", err)
+		}
+	}
+
 	// Map raw data to domain transactions and save
-	transactions := make([]*domain.Transaction, 0, len(rawTransactions))
-	for _, raw := range rawTransactions {
+	transactions := make([]*domain.Transaction, 0, len(statement.Transactions))
+	for _, raw := range statement.Transactions {
 		tx := mapToDomain(userID, raw)
 
 		if err := uc.transactionRepo.Create(ctx, tx); err != nil {

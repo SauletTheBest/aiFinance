@@ -54,7 +54,7 @@ func toBalanceDomain(m *balanceModel) *domain.Balance {
 // 	}
 // }
 
-func (r *StatisticsRepo) GetBalance(ctx context.Context, userID uuid.UUID) (*domain.Balance, error) {
+func (r *StatisticsRepo) GetNetFlow(ctx context.Context, userID uuid.UUID) (*domain.Balance, error) {
 	var result balanceModel
 
 	err := r.db.WithContext(ctx).

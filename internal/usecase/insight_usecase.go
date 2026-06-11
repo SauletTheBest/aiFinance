@@ -23,6 +23,7 @@ type InsightUseCase struct {
 	insightRepo    repository.InsightRepository
 	statisticsRepo repository.StatisticsRepository
 	goalRepo       repository.GoalRepository
+	userRepo       repository.UserRepository
 	aiClient       *ai.OpenRouterClient
 }
 
@@ -30,12 +31,14 @@ func NewInsightUseCase(
 	insightRepo repository.InsightRepository,
 	statisticsRepo repository.StatisticsRepository,
 	goalRepo repository.GoalRepository,
+	userRepo repository.UserRepository,
 	aiClient *ai.OpenRouterClient,
 ) *InsightUseCase {
 	return &InsightUseCase{
 		insightRepo:    insightRepo,
 		statisticsRepo: statisticsRepo,
 		goalRepo:       goalRepo,
+		userRepo:       userRepo,
 		aiClient:       aiClient,
 	}
 }
@@ -48,7 +51,21 @@ func (uc *InsightUseCase) GetOrGenerateInsights(ctx context.Context, userID uuid
 
 	income, expenses, _ := uc.statisticsRepo.GetIncomeExpense(ctx, userID, &start, &now)
 	categories, _ := uc.statisticsRepo.GetCategories(ctx, userID, &start, &now)
-	balance, _ := uc.statisticsRepo.GetBalance(ctx, userID)
+	
+	var balance *domain.Balance
+	user, err := uc.userRepo.GetByID(ctx, userID)
+	if err == nil {
+		netFlow, err := uc.statisticsRepo.GetNetFlow(ctx, userID)
+		if err == nil {
+			balance = &domain.Balance{
+				UserID:    userID.String(),
+				Total:     user.BaseBalance + netFlow.Total,
+				Currency:  user.Currency,
+				UpdatedAt: netFlow.UpdatedAt,
+			}
+		}
+	}
+
 	goals, _ := uc.goalRepo.GetByUserID(ctx, userID)
 
 	// Build one shared data context for all insights
@@ -160,7 +177,21 @@ func (uc *InsightUseCase) ForceRefreshInsight(ctx context.Context, userID uuid.U
 
     income, expenses, _ := uc.statisticsRepo.GetIncomeExpense(ctx, userID, &start, &now)
     categories, _ := uc.statisticsRepo.GetCategories(ctx, userID, &start, &now)
-    balance, _ := uc.statisticsRepo.GetBalance(ctx, userID)
+    
+    var balance *domain.Balance
+    user, err := uc.userRepo.GetByID(ctx, userID)
+    if err == nil {
+        netFlow, err := uc.statisticsRepo.GetNetFlow(ctx, userID)
+        if err == nil {
+            balance = &domain.Balance{
+                UserID:    userID.String(),
+                Total:     user.BaseBalance + netFlow.Total,
+                Currency:  user.Currency,
+                UpdatedAt: netFlow.UpdatedAt,
+            }
+        }
+    }
+
     goals, _ := uc.goalRepo.GetByUserID(ctx, userID)
 
     // 2. Build data context
