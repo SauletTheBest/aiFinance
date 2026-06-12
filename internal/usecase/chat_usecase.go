@@ -15,23 +15,26 @@
     // ChatUseCase handles the AI chat feature.
     // It does NOT own any new repo — it borrows existing ones.
     type ChatUseCase struct {
-        userRepo       repository.UserRepository
-        goalRepo       repository.GoalRepository
-        statisticsRepo repository.StatisticsRepository
-        aiClient       *ai.OpenRouterClient
+        userRepo        repository.UserRepository
+        goalRepo        repository.GoalRepository
+        transactionRepo repository.TransactionRepository
+        statisticsRepo  repository.StatisticsRepository
+        aiClient        *ai.OpenRouterClient
     }
 
     func NewChatUseCase(
         userRepo repository.UserRepository,
         goalRepo repository.GoalRepository,
+        transactionRepo repository.TransactionRepository,
         statisticsRepo repository.StatisticsRepository,
         aiClient *ai.OpenRouterClient,
     ) *ChatUseCase {
         return &ChatUseCase{
-            userRepo:       userRepo,
-            goalRepo:       goalRepo,
-            statisticsRepo: statisticsRepo,
-            aiClient:       aiClient,
+            userRepo:        userRepo,
+            goalRepo:        goalRepo,
+            transactionRepo: transactionRepo,
+            statisticsRepo:  statisticsRepo,
+            aiClient:        aiClient,
         }
     }
 
@@ -66,10 +69,25 @@
             return "", fmt.Errorf("chat: get categories failed: %w", err)
         }
 
+
         // 5. Get all active goals
         goals, err := uc.goalRepo.GetByUserID(ctx, userID)
         if err != nil {
             return "", fmt.Errorf("chat: get goals failed: %w", err)
+        }
+
+        // --- Fetch user's transactions ---
+        transactions, err := uc.transactionRepo.GetByUserID(ctx, userID)
+        if err != nil {
+            return "", fmt.Errorf("chat: get transactions failed: %w", err)
+        }
+
+        // Filter transactions for the last 30 days and limit to 100 to avoid token limits
+        var recentTransactions []*domain.Transaction
+        for _, tx := range transactions {
+            if tx.CreatedAt.After(last30Start) && len(recentTransactions) < 100 {
+                recentTransactions = append(recentTransactions, tx)
+            }
         }
 
         // ── MVP Metrics ──────────────────────────────────────────
@@ -108,6 +126,7 @@
             savingsRate,
             incomeTrend,
             expenseTrend,
+            recentTransactions,
         )
 
         // 7. Add the current message to the history
@@ -132,6 +151,7 @@
         savingsRate float64,   
         incomeTrend float64,    
         expenseTrend float64,
+        transactions []*domain.Transaction,
     ) string {
         var sb strings.Builder
 
@@ -188,12 +208,26 @@
                 }
                 sb.WriteString(line + "\n")
             }
+            sb.WriteString("\n")
         } else {
-            sb.WriteString("Active Savings Goals: none\n")
+            sb.WriteString("Active Savings Goals: none\n\n")
+        }
+
+        // --- Recent Transactions ---
+        if len(transactions) > 0 {
+            sb.WriteString("Recent Transactions (last 30 days):\n")
+            for _, tx := range transactions {
+                dateStr := tx.CreatedAt.Format("2006-01-02 15:04")
+                sb.WriteString(fmt.Sprintf("  - %s | %s | %.2f %s | Category: %s | Description: %s\n",
+                    dateStr, tx.Type, tx.Amount, user.Currency, tx.Category, tx.Description))
+            }
+            sb.WriteString("\n")
+        } else {
+            sb.WriteString("Recent Transactions (last 30 days): none\n\n")
         }
 
         // --- Computed Metrics ---
-        sb.WriteString("\nFinancial Health Metrics:\n")
+        sb.WriteString("Financial Health Metrics:\n")
         sb.WriteString(fmt.Sprintf("  Savings Rate:   %.1f%% (last 30 days)\n", savingsRate))
         sb.WriteString(fmt.Sprintf("  Income Trend:   %+.1f%% (last 30d vs previous 30d)\n", incomeTrend))
         sb.WriteString(fmt.Sprintf("  Expense Trend:  %+.1f%% (last 30d vs previous 30d)\n", expenseTrend))
