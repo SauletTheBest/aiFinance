@@ -21,7 +21,14 @@ A financial application backend built using Go, adhering to Clean Architecture p
    JWT_SECRET=supersecret
    PORT=8080
    OPENROUTER_API_KEY=youropenrouterapi
-   OPENROUTER_MODEL=openai/gpt-oss-120b:free 
+   OPENROUTER_MODEL=openai/gpt-oss-120b:free
+   GMAIL_SENDER=yourgmailsenderaccount
+   REDIRECT_URI=
+   REFRESH_TOKEN=
+   CLIENT_ID=
+   GMAIL_CLIENT_ID=
+   ANDROID_CLIENT_ID=
+   CLIENT_SECRET=
    ```
 2. **Database Required**: A running PostgreSQL instance.
 3. **Execute**:
