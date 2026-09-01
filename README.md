@@ -1,158 +1,194 @@
-# AI-Based Financial Application - aiFinance
+<div align="center">
 
-A financial application backend built using Go, adhering to Clean Architecture principles. It enables users to track finances, categorize transactions, generate statistics, and automatically parse bank statements (such as Kaspi Bank PDF statements).
+# 💰 aiFinance
 
-## Features
-- **User Authentication**: JWT-based secure login and registration.
-- **Transaction Management**: Full CRUD operations to track income and expenses.
-- **PDF Parsing**: Automated extraction and saving of bulk transactions directly from Kaspi Bank PDF statements.
-- **Financial Statistics**: See balances and query time-period-based statistics (net flow, aggregate category info).
-- **Architecture**: Designed with separation of concerns: Routers -> Handlers -> UseCases -> Repositories -> PostgreSQL mapping.
+**AI-powered personal finance assistant built with Go**
 
-## Setup & Running
+Track expenses · Set savings goals · Get AI insights · Import bank statements
 
-1. **Environment Config**: Create an `.env` file at the root of the project with your database settings:
+[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-aifinance-7c3aed?style=for-the-badge)](https://aifinance-eta.vercel.app/)
+[![Go](https://img.shields.io/badge/Go-1.25-00ADD8?style=for-the-badge&logo=go&logoColor=white)](https://go.dev/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Render](https://img.shields.io/badge/Deployed_on-Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://render.com/)
+
+<br/>
+
+<img src="docs/screenshots/analyticsV2(3d).png" width="320" alt="aiFinance Dashboard"/>
+
+</div>
+
+> [!NOTE]
+> Google Sign-In is currently available **only on the mobile app**. The web version supports email/password authentication.
+
+---
+
+## ✨ Features
+
+| Feature | Description |
+| :--- | :--- |
+| 📊 **Smart Analytics** | Interactive charts with category breakdowns, spending trends, and net flow analysis |
+| 🤖 **AI Financial Advisor** | Chat with an AI that knows your financial data and gives personalized advice |
+| 🎯 **Savings Goals** | Create goals, track progress, and get deadline reminders |
+| 📄 **Bank Statement Import** | Upload Kaspi Gold PDF statements — transactions are parsed and auto-categorized by AI |
+| 🔐 **Secure Auth** | JWT-based authentication with email verification and Google OAuth |
+| 📧 **Email Notifications** | Verification codes and alerts via Gmail API |
+
+---
+
+## 📱 Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/analitycs.png" width="24%" alt="Analytics" />
+  <img src="docs/screenshots/goals.png" width="24%" alt="Goals" />
+  <img src="docs/screenshots/chat.png" width="24%" alt="AI Chat" />
+  <img src="docs/screenshots/importdata.png" width="24%" alt="Import Data" />
+</p>
+
+<p align="center">
+  <sub>Analytics & Trends · Savings Goals · AI Advisor · Bank Statement Import</sub>
+</p>
+
+---
+
+## 🏗 Architecture
+
+```
+cmd/api/            → Application entrypoint
+internal/
+├── config/         → Environment configuration
+├── app/            → App initialization & lifecycle
+├── handler/        → HTTP request handlers (Gin)
+├── usecase/        → Business logic layer
+├── repository/     → Data access layer (GORM + PostgreSQL)
+├── domain/         → Domain models & interfaces
+├── ai/             → OpenRouter AI client
+├── email/          → Gmail API integration
+├── worker/         → Background categorization worker
+├── middleware/     → Auth & CORS middleware
+└── db/             → Database connection & embedded SQL migrations
+pkg/
+├── jwt/            → JWT token service
+├── kaspi/          → Kaspi Bank PDF parser
+├── google/         → Google OAuth token verifier
+├── password/       → Bcrypt hashing utilities
+└── validator/      → Input validation helpers
+```
+
+---
+
+## 🛠 Tech Stack
+
+- **Language:** Go 1.25
+- **Framework:** Gin
+- **Database:** PostgreSQL (Supabase)
+- **ORM:** GORM
+- **AI:** OpenRouter API (Gemini, GPT, etc.)
+- **Auth:** JWT + Google OAuth2
+- **Email:** Gmail API (OAuth2)
+- **Deploy:** Render (backend) · Vercel (frontend)
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Go 1.25+
+- PostgreSQL instance (or [Supabase](https://supabase.com/) free tier)
+
+### Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/SauletTheBest/aiFinance.git
+   cd aiFinance
+   ```
+
+2. **Configure environment** — create a `.env` file in the project root:
    ```env
    DB_HOST=localhost
    DB_PORT=5432
    DB_USER=postgres
-   DB_PASSWORD=secret
-   DB_NAME=finance_app
-   JWT_SECRET=supersecret
+   DB_PASSWORD=your_password
+   DB_NAME=postgres
+   DB_SSLMODE=disable
+   JWT_SECRET=your_jwt_secret
    PORT=8080
-   OPENROUTER_API_KEY=youropenrouterapi
-   OPENROUTER_MODEL=openai/gpt-oss-120b:free
-   GMAIL_SENDER=yourgmailsenderaccount
-   REDIRECT_URI=
-   REFRESH_TOKEN=
-   CLIENT_ID=
-   GMAIL_CLIENT_ID=
-   ANDROID_CLIENT_ID=
-   CLIENT_SECRET=
+   OPENROUTER_API_KEY=your_openrouter_key
+   OPENROUTER_MODEL=google/gemini-2.5-flash
+   CLIENT_ID=your_google_client_id
+   CLIENT_SECRET=your_google_client_secret
+   REFRESH_TOKEN=your_gmail_refresh_token
+   GMAIL_SENDER=your_email@gmail.com
+   ANDROID_CLIENT_ID=your_android_client_id
    ```
-2. **Database Required**: A running PostgreSQL instance.
-3. **Execute**:
+
+3. **Run the server**
    ```bash
    cd cmd/api
    go run main.go
    ```
-   The backend API will start on `https://localhost:8080`.
+   The API will be available at `http://localhost:8080`
 
 ---
 
-## API Endpoints Reference
+## 📡 API Reference
 
-### Public Authentication
-**Base Path:** `/api/auth`
+All protected routes require header: `Authorization: Bearer <token>`
 
-- **POST** `/register` — Register a new account.
-  ```json
-  // Request Body
-  {
-    "name": "John Doe",
-    "email": "john@example.com",
-    "password": "securepassword123",
-    "currency": "KZT"
-  }
-  ```
+### Auth `/api/auth`
 
-- **POST** `/login` — Login into the system to get a JWT token.
-  ```json
-  // Request Body
-  {
-    "email": "john@example.com",
-    "password": "securepassword123"
-  }
-  ```
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| POST | `/register` | Create a new account |
+| POST | `/login` | Login & receive JWT token |
+| POST | `/google` | Google OAuth sign-in |
+| POST | `/verify` | Verify email with code |
+
+### Transactions `/api/transactions`
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| GET | `/` | List all transactions (`?page=1&limit=10`) |
+| GET | `/:id` | Get transaction by ID |
+| POST | `/` | Create a transaction |
+| PUT | `/:id` | Update a transaction |
+| DELETE | `/:id` | Delete a transaction |
+
+### Statement Import `/api/statements`
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| POST | `/upload` | Upload Kaspi PDF statement (`multipart/form-data`) |
+
+### Statistics `/api/statistics`
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| GET | `/` | Financial stats (`?period_start=...&period_end=...`) |
+| GET | `/balance` | Current balance |
+| PUT | `/balance` | Set opening balance |
+
+### Goals `/api/goals`
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| GET | `/` | List all goals |
+| GET | `/:id` | Get goal details |
+| POST | `/` | Create a new goal |
+| PUT | `/:id/contribute` | Add money to a goal |
+| DELETE | `/:id` | Delete a goal |
+
+### AI Chat `/api/chat`
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| POST | `/` | Send a message to AI financial advisor |
 
 ---
 
-### Protected Routes
-_All actions below require the HTTP Header to be passed: `Authorization: Bearer <your_jwt_token>`_
+<div align="center">
 
-**Base Path:** `/api`
+Made with by [SauletTheBest](https://github.com/SauletTheBest)
 
-#### Profile
-- **GET** `/profile` — Get the currently logged-in user's active profile and currency.
-- **POST** `/profile` — Update user profile.
-
-#### Transactions
-- **POST** `/transactions` — Create a new transaction.
-  ```json
-  {
-    "amount": 1500.50,
-    "description": "Groceries",
-    "category": "Food",
-    "type": "expense",
-    "created_at": "2023-10-12T15:00:00Z"
-  }
-  ```
-- **GET** `/transactions` — Fetch all previous transactions of the user. 
-  - Supports query param pagination: `?page=1&limit=10`
-- **GET** `/transactions/:id` — Retrieve details for a single specific transaction by UUID.
-- **PUT** `/transactions/:id` — Update transaction properties.
-  ```json
-  {
-    "amount": 2000.00,
-    "description": "Groceries and Snacks",
-    "category": "Food",
-    "created_at": "2023-10-12T15:00:00Z"
-  }
-  ```
-- **DELETE** `/transactions/:id` — Permenantly remove a transaction.
-
-#### Statement Integrations
-- **POST** `/statements/upload` — Upload Kaspi PDF Bank statements.
-  - **Type**: `multipart/form-data`
-  - **Body Parameter**: `file` (Expecting `.pdf` type only)
-  - _Description_: The internal PDF parser will comb through and extract all transaction rows and apply it sequentially to the user's transaction book natively.
-
-#### Statistics & Reporting
-- **GET** `/statistics/balance` — Fetches standard account current balances.
-- **GET** `/statistics` — Get detailed financial insights and aggregations.
-  - **Available Query Params**: `?period_start=2023-01-01&period_end=2023-12-31`
-  - **Sample Response**:
-    ```json
-    {
-      "balance": {
-         "total": 120000.0,
-         "currency": "KZT",
-         "updated_at": "2023-10-12T00:00:00Z"
-      },
-      "income": 50000.0,
-      "expenses": 15000.0,
-      "net_flow": 35000.0,
-      "expense_categories": [{"category": "Food", "amount": 10000.0}],
-      "income_categories": [{"category": "Salary", "amount": 50000.0}],
-      "period_start": "2023-01-01T00:00:00Z",
-      "period_end": "2023-12-31T23:59:59Z"
-    }
-    ```
-
-#### Goals Tracking
-- **POST** `/goals` — Create a new financial goal.
-  ```json
-  {
-    "title": "New Laptop",
-    "target_amount": 500000.00,
-    "description": "For watch films"
-    "deadline": "2024-12-31T00:00:00Z"
-  }
-  ```
-- **GET** `/goals` — Fetch all goals for the logged-in user.
-- **GET** `/goals/:id` — Retrieve details for a single specific goal.
-- **PUT** `/goals/:id/contribute` — Add progress (money) to a specific goal.
-  ```json
-  {
-    "amount": 50.00
-  }
-  ```
-- **DELETE** `/goals/:id` — Permanently delete a goal.
-
-#### Balance Management
-- **PUT** `/statistics/balance` — Update the user's base opening balance.
-  ```json
-  {
-    "total": 5000.00
-  }
-  ```
+</div>
