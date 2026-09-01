@@ -31,8 +31,8 @@ type App struct {
 func NewApp(cfg *config.Config) *App {
 
 	//data sourse name
-	dsn := fmt.Sprintf("host=%s port= %d user=%s password=%s dbname=%s sslmode=disable",
-		cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName)
+	dsn := fmt.Sprintf("host=%s port= %d user=%s password=%s dbname=%s sslmode=%s",
+		cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBSSLMode)
 
 	database, err := db.NewPostgres(dsn)
 	if err != nil {

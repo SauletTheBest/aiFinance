@@ -11,6 +11,7 @@ type Config struct {
 	DBUser            string
 	DBPassword        string
 	DBName            string
+	DBSSLMode         string
 	JWTSecret         string
 	ServerPort        int
 	OpenRouterAPIKey  string
@@ -33,6 +34,7 @@ func Load() *Config {
 		DBUser:            getEnv("DB_USER", "postgres"),
 		DBPassword:        getEnv("DB_PASSWORD", ""),
 		DBName:            getEnv("DB_NAME", "financial_app"),
+		DBSSLMode:         getEnv("DB_SSLMODE", "disable"),
 		JWTSecret:         getEnv("JWT_SECRET", "default_secret"),
 		ServerPort:        serverPort,
 		OpenRouterAPIKey:  getEnv("OPENROUTER_API_KEY", ""),
