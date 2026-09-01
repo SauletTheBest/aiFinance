@@ -1,4 +1,4 @@
-# AI-Based Financial Application (Backend)
+# AI-Based Financial Application - aiFinance
 
 A financial application backend built using Go, adhering to Clean Architecture principles. It enables users to track finances, categorize transactions, generate statistics, and automatically parse bank statements (such as Kaspi Bank PDF statements).
 
